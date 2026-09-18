@@ -1,0 +1,83 @@
+{
+  "apiVersion": "modernedi.com/v1",
+  "kind": "ScenarioBinding",
+  "metadata": {
+    "key": "7c64458f-a2dd-4929-8f11-9aab55a49faa"
+  },
+  "spec": {
+    "source": {
+      "$schema": "https://www.modernedi.com/docs/scenarios/schemas/scenario-binding-v1.schema.json",
+      "apiVersion": "modernedi.com/scenario-binding-authoring/v1",
+      "kind": "ScenarioBinding",
+      "metadata": {
+        "id": "retailOrderInvoice",
+        "name": "Retail order to invoice"
+      },
+      "spec": {
+        "definition": {
+          "namespace": "example",
+          "key": "order-to-invoice",
+          "version": "1.0.0",
+          "contentSha256": "9e4367fb08a0980d86623fb4ffad0665cb58d7b65f696401c1d88dfa98a1dea0"
+        },
+        "environment": "test",
+        "actors": [
+          {
+            "actorId": "retailer",
+            "endpoint": {
+              "kind": "partner",
+              "partnerKey": "61c5a052-9f83-49e9-a858-e7ddbc56a514"
+            }
+          },
+          {
+            "actorId": "supplier",
+            "endpoint": {
+              "kind": "workspace"
+            }
+          }
+        ],
+        "steps": [
+          {
+            "stepId": "purchaseOrder",
+            "target": {
+              "kind": "runtime-mapping",
+              "mappingKey": "8ccf76f0-2701-4d4c-a5c4-94a453feec81"
+            },
+            "factSources": [
+              {
+                "fact": "purchaseOrderNumber",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "ST->BEG(03)"
+                }
+              }
+            ]
+          },
+          {
+            "stepId": "invoice",
+            "target": {
+              "kind": "runtime-mapping",
+              "mappingKey": "4e948d62-a513-4fe7-8b88-12ba095b2b36"
+            },
+            "factSources": [
+              {
+                "fact": "purchaseOrderNumber",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "ST->BIG(04)"
+                }
+              },
+              {
+                "fact": "invoiceTotal",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "ST->TDS(01)"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

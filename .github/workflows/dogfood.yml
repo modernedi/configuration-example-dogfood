@@ -1,0 +1,93 @@
+name: Synthetic workspace acceptance
+on:
+  workflow_dispatch: null
+permissions:
+  contents: read
+concurrency:
+  group: modernedi-workspace-apply
+  cancel-in-progress: false
+jobs:
+  plan:
+    if: github.repository == 'modernedi/configuration-example-dogfood' &&
+      github.event.repository.private == false && vars.MODERNEDI_LIVE_CI ==
+      'true' && vars.MODERNEDI_VERIFY_CASES == 'true' && github.ref ==
+      'refs/heads/main' && github.ref_protected
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: modernedi-plan
+    outputs:
+      verify_cases: ${{ steps.policy.outputs.verify_cases }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --registry https://registry.npmjs.org/
+      - name: Record this review's test policy
+        id: policy
+        env:
+          VERIFY_CASES: ${{ vars.MODERNEDI_VERIFY_CASES }}
+        run: |
+          if [ "$VERIFY_CASES" = true ]; then
+            echo 'verify_cases=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'verify_cases=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Require the exact synthetic workspace and scopes
+        env:
+          MODERNEDI_API_KEY: ${{ secrets.MODERNEDI_API_KEY }}
+        run: node scripts/assert-dogfood-target.mjs plan
+      - name: Make a fresh post-merge plan for approval
+        env:
+          MODERNEDI_API_KEY: ${{ secrets.MODERNEDI_API_KEY }}
+          MODERNEDI_VERIFY_CASES: ${{ steps.policy.outputs.verify_cases }}
+          MODERNEDI_SOURCE_SHA: ${{ github.sha }}
+        run: node scripts/ci.mjs plan modernedi artifacts
+      - name: Keep synthetic review evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: reviewed-plan-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/
+          retention-days: 7
+          if-no-files-found: error
+  apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: modernedi-apply
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --registry https://registry.npmjs.org/
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: reviewed-plan-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts
+      - name: Require the exact synthetic workspace and scopes
+        env:
+          MODERNEDI_API_KEY: ${{ secrets.MODERNEDI_API_KEY }}
+        run: node scripts/assert-dogfood-target.mjs apply
+      - name: Apply exactly what was reviewed
+        env:
+          MODERNEDI_API_KEY: ${{ secrets.MODERNEDI_API_KEY }}
+          MODERNEDI_VERIFY_CASES: ${{ needs.plan.outputs.verify_cases }}
+          MODERNEDI_SOURCE_SHA: ${{ github.sha }}
+        run: node scripts/ci.mjs apply modernedi artifacts
+      - name: Keep operation identity even if observation times out
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: apply-result-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/
+          retention-days: 7

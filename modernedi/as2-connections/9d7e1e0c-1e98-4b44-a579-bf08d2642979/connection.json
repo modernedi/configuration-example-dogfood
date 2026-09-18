@@ -1,0 +1,41 @@
+{
+  "apiVersion": "modernedi.com/v1",
+  "kind": "As2Connection",
+  "metadata": {
+    "key": "9d7e1e0c-1e98-4b44-a579-bf08d2642979"
+  },
+  "spec": {
+    "environments": {
+      "production": {
+        "as2Identifier": "EXAMPLE_RETAILER",
+        "endpointUrl": "https://as2.example.invalid/receive",
+        "publicCertificatePath": "./certificates/shared.pem",
+        "requireSignature": true,
+        "requireEncryption": true
+      },
+      "test": {
+        "as2Identifier": "EXAMPLE_RETAILER_TEST",
+        "endpointUrl": "https://as2-test.example.invalid/receive",
+        "publicCertificatePath": "./certificates/shared.pem",
+        "requireSignature": true,
+        "requireEncryption": true
+      }
+    },
+    "outbound": {
+      "signingAlgorithm": "SHA256WITHRSA",
+      "encryptionAlgorithm": "AES256_CBC",
+      "compressionAlgorithm": "ZLIB",
+      "micAlgorithm": "SHA_256",
+      "micAlgorithmFormat": "RFC_3851"
+    },
+    "functionalAcknowledgment": {
+      "messageStructure": "SIGNED_ENCRYPTED"
+    },
+    "mdn": {
+      "encrypt": false,
+      "forceSynchronousForErrors": true
+    },
+    "cmsAlgorithmProtection": false,
+    "digestCanonicalizationPolicy": "AUTO"
+  }
+}

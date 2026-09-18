@@ -1,0 +1,18 @@
+{
+  "resources": [
+    {
+      "kind": "ScenarioDefinition",
+      "key": "38b3a814-df52-48d8-8c8c-3289ffdbd4f8",
+      "path": "scenario-definitions/38b3a814-df52-48d8-8c8c-3289ffdbd4f8/definition.json"
+    },
+    {
+      "kind": "ScenarioBinding",
+      "key": "7c64458f-a2dd-4929-8f11-9aab55a49faa",
+      "path": "scenario-bindings/7c64458f-a2dd-4929-8f11-9aab55a49faa/binding.json"
+    }
+  ],
+  "files": [
+    { "path": "scenario-definitions/38b3a814-df52-48d8-8c8c-3289ffdbd4f8/definition.json" },
+    { "path": "scenario-bindings/7c64458f-a2dd-4929-8f11-9aab55a49faa/binding.json" }
+  ]
+}

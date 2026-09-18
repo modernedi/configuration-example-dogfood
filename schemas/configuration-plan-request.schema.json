@@ -1,0 +1,3245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Portable desired-state bundle submitted for read-only planning. It contains exactly one manifest and every resource and mapping-source file inventoried by that manifest. It may also include at most one advisory STATE file copied directly from configuration export; ModernEDI never treats that file as authority over current workspace state.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "files"
+  ],
+  "properties": {
+    "refreshScenarioBindings": {
+      "$ref": "#/$defs/ConfigurationScenarioBindingRefresh"
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5000,
+      "description": "Desired files plus, optionally, the single exported advisory state file. Paths must be safe, case-insensitively unique relative POSIX paths, and each declared hash must match the file's logical bytes. Only `_state/snapshot.json` may use the `_state` prefix.",
+      "items": {
+        "$ref": "#/$defs/ConfigurationPlanFile"
+      }
+    }
+  },
+  "$defs": {
+    "ConfigurationScenarioBindingRefresh": {
+      "type": "array",
+      "maxItems": 100,
+      "uniqueItems": true,
+      "description": "Optional binding resource keys to re-apply against the destination workspace's current runtime authority without changing their authored files. Include the same selection in plan and apply. Referenced mapping/partner changes also produce explicit dependent binding updates in the plan. This option is apply metadata and never enters Git files.",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "ConfigurationPlanFile": {
+      "description": "One portable desired file or the optional exported advisory snapshot. The role makes these alternatives unambiguous.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ConfigurationDesiredFile"
+        },
+        {
+          "$ref": "#/$defs/ConfigurationPlanAdvisoryStateFile"
+        }
+      ]
+    },
+    "ConfigurationDesiredFile": {
+      "description": "One portable desired-state file accepted by configuration planning. JSON content is an object; SOURCE and CERTIFICATE content are exact UTF-8 text strings. A CERTIFICATE must contain exactly one public X.509 certificate in canonical PEM and use as2-connections/<key>/certificates/<name>.pem. Names have 1-64 lowercase letters, digits, hyphens or underscores and start with a letter or digit. Production and Test may reference the same file within their connection.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "role",
+        "format",
+        "mediaType",
+        "contentSha256",
+        "content"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._/-]+$",
+          "description": "Safe relative POSIX-style path outside `_state`. The sole MANIFEST path is exactly `modernedi.json`."
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "MANIFEST",
+            "RESOURCE",
+            "SOURCE",
+            "CERTIFICATE"
+          ],
+          "description": "Desired-file purpose. STATE is deliberately excluded because observed server identity is not portable desired configuration."
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "JSON",
+            "TEXT"
+          ],
+          "description": "MANIFEST and RESOURCE files use JSON; SOURCE and CERTIFICATE files use TEXT."
+        },
+        "mediaType": {
+          "type": "string",
+          "enum": [
+            "application/json",
+            "text/plain; charset=utf-8"
+          ],
+          "description": "MANIFEST and RESOURCE files use `application/json`; SOURCE and CERTIFICATE files use exact UTF-8 text."
+        },
+        "contentSha256": {
+          "$ref": "#/$defs/ConfigurationSha256"
+        },
+        "content": {
+          "description": "Parsed manifest or resource object, or exact mapping-source text.",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ConfigurationBundleManifest"
+            },
+            {
+              "$ref": "#/$defs/ConfigurationResourceDocument"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "ConfigurationSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Lowercase hexadecimal SHA-256 digest.",
+      "example": "30d7e671476880c8d357370bf9a7c21fc59f55d2435073e92763f61d1c72f749"
+    },
+    "ConfigurationBundleManifest": {
+      "description": "Portable desired-state manifest stored at `modernedi.json`. It inventories resources and all desired files but intentionally excludes the manifest itself and `_state/snapshot.json`.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "resources",
+        "files"
+      ],
+      "properties": {
+        "apiVersion": {
+          "$ref": "#/$defs/ConfigurationDocumentApiVersion"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "IntegrationConfiguration"
+          ]
+        },
+        "resources": {
+          "type": "array",
+          "description": "Exported resources sorted lexicographically by their resource-document path.",
+          "items": {
+            "$ref": "#/$defs/ConfigurationManifestResource"
+          }
+        },
+        "files": {
+          "type": "array",
+          "description": "Resource and mapping-source files sorted lexicographically by path. Manifest and state files are excluded.",
+          "items": {
+            "$ref": "#/$defs/ConfigurationManifestFile"
+          }
+        }
+      }
+    },
+    "ConfigurationDocumentApiVersion": {
+      "type": "string",
+      "enum": [
+        "modernedi.com/v1"
+      ],
+      "description": "Version of the portable configuration document contract used by export, planning, and apply."
+    },
+    "ConfigurationManifestResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "key",
+        "path",
+        "contentSha256"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ConfigurationResourceKind"
+        },
+        "key": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Stable portable resource key used by other exported resources."
+        },
+        "path": {
+          "type": "string",
+          "description": "Path of the resource document in this bundle."
+        },
+        "contentSha256": {
+          "$ref": "#/$defs/ConfigurationSha256"
+        }
+      }
+    },
+    "ConfigurationResourceKind": {
+      "type": "string",
+      "enum": [
+        "As2Connection",
+        "Partner",
+        "Mapping",
+        "ScenarioDefinition",
+        "ScenarioBinding"
+      ],
+      "description": "Exportable ModernEDI configuration resource type."
+    },
+    "ConfigurationManifestFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "contentSha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Desired resource or source path in this bundle."
+        },
+        "contentSha256": {
+          "$ref": "#/$defs/ConfigurationSha256"
+        }
+      }
+    },
+    "ConfigurationResourceDocument": {
+      "description": "Portable connection, partner, mapping, or optional scenario desired-state document. References use stable UUID keys rather than workspace database ids. Scenario resources contain the complete authored document under spec.source; runtime snapshots and evidence are not source configuration.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ConfigurationAs2ConnectionResourceDocument"
+        },
+        {
+          "$ref": "#/$defs/ConfigurationPartnerResourceDocument"
+        },
+        {
+          "$ref": "#/$defs/ConfigurationMappingResourceDocument"
+        },
+        {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionResourceDocument"
+        },
+        {
+          "$ref": "#/$defs/ConfigurationScenarioBindingResourceDocument"
+        }
+      ],
+      "discriminator": {
+        "propertyName": "kind",
+        "mapping": {
+          "As2Connection": "#/components/schemas/ConfigurationAs2ConnectionResourceDocument",
+          "Partner": "#/components/schemas/ConfigurationPartnerResourceDocument",
+          "Mapping": "#/components/schemas/ConfigurationMappingResourceDocument",
+          "ScenarioDefinition": "#/components/schemas/ConfigurationScenarioDefinitionResourceDocument",
+          "ScenarioBinding": "#/components/schemas/ConfigurationScenarioBindingResourceDocument"
+        }
+      }
+    },
+    "ConfigurationAs2ConnectionResourceDocument": {
+      "description": "Portable desired state for one AS2 connection.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "metadata",
+        "spec"
+      ],
+      "properties": {
+        "apiVersion": {
+          "$ref": "#/$defs/ConfigurationDocumentApiVersion"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "As2Connection"
+          ]
+        },
+        "metadata": {
+          "$ref": "#/$defs/ConfigurationResourceMetadata"
+        },
+        "spec": {
+          "$ref": "#/$defs/ConfigurationAs2ConnectionSpec"
+        }
+      }
+    },
+    "ConfigurationResourceMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Stable portable identity for this resource."
+        }
+      }
+    },
+    "ConfigurationAs2ConnectionSpec": {
+      "description": "Complete resolved AS2 configuration without its server database id or API ETag. Exports reference public partner certificates beside connection.json. Inline public certificates are also accepted for API-authored and retained historical bundles. Private keys and secret locations are never included.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "environments",
+        "outbound",
+        "functionalAcknowledgment",
+        "mdn",
+        "cmsAlgorithmProtection",
+        "digestCanonicalizationPolicy"
+      ],
+      "properties": {
+        "environments": {
+          "$ref": "#/$defs/ConfigurationAs2Environments"
+        },
+        "outbound": {
+          "$ref": "#/$defs/As2ResolvedOutboundSettings"
+        },
+        "functionalAcknowledgment": {
+          "$ref": "#/$defs/As2ResolvedFunctionalAcknowledgmentSettings"
+        },
+        "mdn": {
+          "$ref": "#/$defs/As2ResolvedMdnSettings"
+        },
+        "cmsAlgorithmProtection": {
+          "type": "boolean",
+          "description": "Effective RFC 6211 `cmsAlgorithmProtect` compatibility setting."
+        },
+        "digestCanonicalizationPolicy": {
+          "type": "string",
+          "enum": [
+            "AUTO",
+            "CANONICALIZE",
+            "PRESERVE"
+          ],
+          "description": "Effective inbound signature-verification treatment of MIME line endings."
+        }
+      }
+    },
+    "ConfigurationAs2Environments": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "production",
+        "test"
+      ],
+      "properties": {
+        "production": {
+          "$ref": "#/$defs/ConfigurationAs2Environment"
+        },
+        "test": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ConfigurationAs2Environment"
+            },
+            {
+              "type": [
+                "object",
+                "null"
+              ],
+              "enum": [
+                null
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "ConfigurationAs2Environment": {
+      "description": "An environment has either one inline public certificate or a file reference, never both. File references are confined to this connection. Production and Test may share one file; replacing it changes both environments' certificates.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/As2PartnerEnvironmentResolved"
+        },
+        {
+          "$ref": "#/$defs/ConfigurationAs2FileEnvironment"
+        }
+      ]
+    },
+    "As2PartnerEnvironmentResolved": {
+      "description": "Persisted AS2 partner environment with all secure inbound-protection defaults resolved.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/As2PartnerEnvironment"
+        },
+        {
+          "type": "object",
+          "required": [
+            "requireSignature",
+            "requireEncryption"
+          ]
+        }
+      ]
+    },
+    "As2PartnerEnvironment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "as2Identifier",
+        "publicCertificatePem"
+      ],
+      "properties": {
+        "as2Identifier": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Partner's environment-specific AS2 identifier. ModernEDI matches it as inbound `AS2-From` and sends it as outbound `AS2-To`.",
+          "example": "RETAILER_PROD"
+        },
+        "endpointUrl": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri",
+          "maxLength": 2000,
+          "description": "Optional outbound destination. Omit it or use `null` for an inbound-only profile. When present, it must be an absolute HTTP or HTTPS partner destination URL without user information or a fragment. Endpoint workspaces must use HTTPS; plain HTTP requires Endpoint Plus, Static Outbound, Static Network, or Enterprise. The host must be publicly routable; local, private, link-local, multicast, carrier-grade NAT, documentation, benchmark, and other reserved address targets are rejected.",
+          "example": "https://as2.retailer.example/receive"
+        },
+        "publicCertificatePem": {
+          "type": "string",
+          "description": "Exactly one PEM-encoded partner X.509 public certificate. ModernEDI canonicalizes it before storage.",
+          "example": "-----BEGIN CERTIFICATE-----\nMIIB...partner-public-certificate...\n-----END CERTIFICATE-----"
+        },
+        "requireSignature": {
+          "type": "boolean",
+          "default": true,
+          "description": "When `true` (the secure default), ModernEDI rejects non-MDN inbound messages for this environment unless the sender signature is present and successfully verified with the configured certificate. This policy belongs to the AS2 connection/environment and therefore applies to every attached partner on a shared or VAN connection. Set `false` only for a documented connection-wide exception. Omission on create resolves to `true`; resolved connection responses always include the field."
+        },
+        "requireEncryption": {
+          "type": "boolean",
+          "default": true,
+          "description": "When `true` (the secure default), ModernEDI rejects non-MDN inbound messages for this environment unless their encrypted content was successfully decrypted. This policy belongs to the AS2 connection/environment and therefore applies to every attached partner on a shared or VAN connection. Set `false` only for a documented connection-wide exception. Omission on create resolves to `true`; resolved connection responses always include the field."
+        }
+      }
+    },
+    "ConfigurationAs2FileEnvironment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "as2Identifier",
+        "endpointUrl",
+        "publicCertificatePath",
+        "publicCertificateSha256",
+        "requireSignature",
+        "requireEncryption"
+      ],
+      "properties": {
+        "as2Identifier": {
+          "type": "string",
+          "minLength": 1
+        },
+        "endpointUrl": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri",
+          "maxLength": 2000,
+          "description": "The same publicly routable destination and workspace plan restrictions as the partner form apply."
+        },
+        "publicCertificatePath": {
+          "type": "string",
+          "pattern": "^\\./certificates/[a-z0-9][a-z0-9_-]{0,63}\\.pem(?![\\s\\S])",
+          "example": "./certificates/shared.pem",
+          "description": "Relative to connection.json. Production and Test may reference the same file. The file name uses 1-64 lowercase letters, digits, hyphens or underscores and starts with a letter or digit. No absolute paths, URLs, traversal, subdirectories, or other connections. Exports use shared.pem when both environments have the same certificate; otherwise production.pem and test.pem."
+        },
+        "publicCertificateSha256": {
+          "$ref": "#/$defs/ConfigurationSha256"
+        },
+        "requireSignature": {
+          "type": "boolean"
+        },
+        "requireEncryption": {
+          "type": "boolean"
+        }
+      }
+    },
+    "As2ResolvedOutboundSettings": {
+      "description": "Fully resolved outbound algorithms and compatibility settings; all fields are present in responses.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/As2OutboundTransportSettings"
+        },
+        {
+          "type": "object",
+          "required": [
+            "signingAlgorithm",
+            "encryptionAlgorithm",
+            "compressionAlgorithm",
+            "micAlgorithm",
+            "micAlgorithmFormat"
+          ]
+        }
+      ]
+    },
+    "As2OutboundTransportSettings": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional outbound AS2 algorithms and MIME-compatibility controls. Each omitted field receives its documented default.",
+      "properties": {
+        "signingAlgorithm": {
+          "type": "string",
+          "enum": [
+            "SHA256WITHRSA",
+            "SHA384WITHRSA",
+            "SHA512WITHRSA",
+            "SHA1WITHRSA"
+          ],
+          "default": "SHA256WITHRSA",
+          "description": "CMS/S/MIME signature algorithm ModernEDI uses for signed outbound payloads, signed automatic X12 acknowledgments, and signed MDNs. Prefer `SHA256WITHRSA`; use `SHA1WITHRSA` only for a legacy partner that cannot verify SHA-2 signatures.",
+          "example": "SHA256WITHRSA"
+        },
+        "encryptionAlgorithm": {
+          "type": "string",
+          "enum": [
+            "AES256_CBC",
+            "AES128_CBC",
+            "DES_EDE3_CBC"
+          ],
+          "default": "AES256_CBC",
+          "description": "CMS content-encryption algorithm for outbound AS2 payloads and any encrypted acknowledgments. Prefer `AES256_CBC`; `DES_EDE3_CBC` exists only for legacy partner interoperability.",
+          "example": "AES256_CBC"
+        },
+        "compressionAlgorithm": {
+          "type": "string",
+          "enum": [
+            "ZLIB"
+          ],
+          "default": "ZLIB",
+          "description": "Compression algorithm used when an outbound AS2 message structure includes compression. `ZLIB` is the only supported customer-selectable value.",
+          "example": "ZLIB"
+        },
+        "micAlgorithm": {
+          "type": "string",
+          "enum": [
+            "SHA_1",
+            "SHA_256",
+            "SHA_512"
+          ],
+          "default": "SHA_256",
+          "description": "Digest algorithm used to calculate and store ModernEDI's local content MIC for outbound X12 payloads and automatic X12 acknowledgments. This does not choose the CMS signature digest (`signingAlgorithm` does), the signed MIME `micalg` token format (`micAlgorithmFormat` does), or the `Received-content-MIC` algorithm used when ModernEDI returns an MDN for an inbound message; that comes from the sender's receipt request."
+        },
+        "micAlgorithmFormat": {
+          "type": "string",
+          "enum": [
+            "RFC_5751",
+            "RFC_3851"
+          ],
+          "default": "RFC_3851",
+          "description": "Advanced partner-compatibility override for the S/MIME `Content-Type` `micalg` parameter on every signed MIME entity ModernEDI generates for this partner, including outbound X12 messages, automatic signed X12 acknowledgments, and the outer wrapper of signed MDNs. `RFC_5751` uses the newer hyphenated token format—for example, `sha-256`—while `RFC_3851` uses the older token `sha256`. Omit this field to use the compatibility-first `RFC_3851` default. This setting changes only the serialized notation of the signature digest selected by `signingAlgorithm` in that MIME parameter; it does not change the digest itself or the algorithm named inside `Received-content-MIC`. Change it only when the partner's AS2 profile or interoperability testing requires a particular token format."
+        }
+      }
+    },
+    "As2ResolvedFunctionalAcknowledgmentSettings": {
+      "description": "Fully resolved MIME packaging for automatic X12 acknowledgments (997 or partner-enabled 999).",
+      "allOf": [
+        {
+          "$ref": "#/$defs/As2FunctionalAcknowledgmentSettings"
+        },
+        {
+          "type": "object",
+          "required": [
+            "messageStructure"
+          ]
+        }
+      ]
+    },
+    "As2FunctionalAcknowledgmentSettings": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional automatic X12 acknowledgment MIME packaging for 997s and partner-enabled 999s. Omit the object or `messageStructure` to use `SIGNED_ENCRYPTED`.",
+      "properties": {
+        "messageStructure": {
+          "type": "string",
+          "enum": [
+            "PLAIN",
+            "SIGNED",
+            "ENCRYPTED",
+            "SIGNED_ENCRYPTED",
+            "PLAIN_COMPRESSED",
+            "SIGNED_COMPRESSED",
+            "ENCRYPTED_COMPRESSED",
+            "ENCRYPTED_COMPRESSED_SIGNED"
+          ],
+          "default": "SIGNED_ENCRYPTED",
+          "description": "MIME signing, encryption, and compression structure used when ModernEDI automatically sends an X12 acknowledgment (997 or partner-enabled 999) to this partner."
+        }
+      }
+    },
+    "As2ResolvedMdnSettings": {
+      "description": "Fully resolved Message Disposition Notification compatibility settings.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/As2MdnSettings"
+        },
+        {
+          "type": "object",
+          "required": [
+            "encrypt",
+            "forceSynchronousForErrors"
+          ]
+        }
+      ]
+    },
+    "As2MdnSettings": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional MDN interoperability controls. Omitted values default to unencrypted MDNs and synchronous error dispositions.",
+      "properties": {
+        "encrypt": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, ModernEDI attempts to encrypt MDNs returned for inbound messages with the partner certificate and configured outbound encryption algorithm. If MDN encryption itself fails, ModernEDI returns an unencrypted error MDN so the partner still receives a disposition."
+        },
+        "forceSynchronousForErrors": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true, an inbound processing failure or error is returned as a synchronous MDN even when the normal receipt flow is asynchronous."
+        }
+      }
+    },
+    "ConfigurationPartnerResourceDocument": {
+      "description": "Portable desired state for one active trading partner.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "metadata",
+        "spec"
+      ],
+      "properties": {
+        "apiVersion": {
+          "$ref": "#/$defs/ConfigurationDocumentApiVersion"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "Partner"
+          ]
+        },
+        "metadata": {
+          "$ref": "#/$defs/ConfigurationResourceMetadata"
+        },
+        "spec": {
+          "$ref": "#/$defs/ConfigurationPartnerSpec"
+        }
+      }
+    },
+    "ConfigurationPartnerSpec": {
+      "description": "Complete persisted partner configuration. It replaces `as2ConnectionId` with a portable `as2ConnectionKey` and includes advanced runtime compatibility settings that participate in workspace configuration.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "as2ConnectionKey",
+        "x12",
+        "ediSupportEmail",
+        "carbonCopyOnly",
+        "implementationAcknowledgmentEnabled",
+        "unmappedInboundPolicy",
+        "signingCertificateSlot",
+        "supportsNewlineAfterSegmentTerminator",
+        "overrideUserAgentString",
+        "overrideSeparatorSet",
+        "messageTypeGsVersionOverrides"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique partner display name in this workspace."
+        },
+        "as2ConnectionKey": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Portable key of the referenced AS2 connection, or `null` for a detached map-authoring draft."
+        },
+        "x12": {
+          "description": "Current production and optional test X12 identities. Detached drafts may contain incomplete authoring values.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PartnerX12Identities"
+            },
+            {
+              "$ref": "#/$defs/PartnerDraftX12Identities"
+            }
+          ]
+        },
+        "ediSupportEmail": {
+          "type": "string",
+          "description": "Partner EDI support address, or an empty string when unavailable."
+        },
+        "carbonCopyOnly": {
+          "type": "boolean"
+        },
+        "implementationAcknowledgmentEnabled": {
+          "type": "boolean",
+          "description": "Whether eligible inbound documents receive a 999 instead of a 997."
+        },
+        "unmappedInboundPolicy": {
+          "type": "string",
+          "enum": [
+            "MAPPED_ONLY",
+            "PASSTHROUGH_RAW_X12"
+          ]
+        },
+        "signingCertificateSlot": {
+          "type": "string",
+          "enum": [
+            "active",
+            "next"
+          ]
+        },
+        "supportsNewlineAfterSegmentTerminator": {
+          "type": "boolean"
+        },
+        "overrideUserAgentString": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Optional AS2 HTTP User-Agent compatibility override."
+        },
+        "overrideSeparatorSet": {
+          "description": "Optional X12 separator override, or `null` to use runtime defaults.",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ConfigurationPartnerSeparatorSet"
+            },
+            {
+              "type": [
+                "object",
+                "null"
+              ],
+              "enum": [
+                null
+              ]
+            }
+          ]
+        },
+        "messageTypeGsVersionOverrides": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Closed runtime compatibility map from supported X12 message-type names to GS08 version overrides. An empty object means no overrides."
+        }
+      }
+    },
+    "PartnerX12Identities": {
+      "type": "object",
+      "required": [
+        "production",
+        "test"
+      ],
+      "description": "Production is always configured. Test is `null` for a production-only partner.",
+      "properties": {
+        "production": {
+          "description": "Complete production X12 sender identity for this connected partner.",
+          "$ref": "#/$defs/PartnerX12Identity"
+        },
+        "test": {
+          "description": "Complete test X12 sender identity, or `null` when this partner has no separate test identity.",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PartnerX12Identity"
+            },
+            {
+              "type": [
+                "object",
+                "null"
+              ],
+              "enum": [
+                null
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "PartnerX12Identity": {
+      "type": "object",
+      "required": [
+        "isaQualifier",
+        "isaId",
+        "gsId"
+      ],
+      "properties": {
+        "isaQualifier": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 2,
+          "description": "ISA qualifier ModernEDI expects for this partner in the selected environment. Connected partners always use exactly 2 characters; detached draft values may be incomplete.",
+          "example": "ZZ"
+        },
+        "isaId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 15,
+          "description": "ISA id ModernEDI expects for this partner in the selected environment. Connected partners always use between 1 and 15 characters inclusive; detached draft values may be incomplete.",
+          "example": "CUSTOMERONE"
+        },
+        "gsId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 15,
+          "description": "GS sender or receiver id configured for this partner in the selected environment. Connected partners always use between 1 and 15 characters inclusive; detached draft values may be incomplete.",
+          "example": "CUSTOMERONE"
+        }
+      }
+    },
+    "PartnerDraftX12Identities": {
+      "type": "object",
+      "description": "Resolved authoring values returned for a detached partner draft. Production fields may remain incomplete until an AS2 connection is attached. Test is `null` when no test identity has been entered.",
+      "required": [
+        "production",
+        "test"
+      ],
+      "properties": {
+        "production": {
+          "description": "Current production authoring values, which may be incomplete until transport is attached.",
+          "$ref": "#/$defs/PartnerDraftX12Identity"
+        },
+        "test": {
+          "description": "Current test authoring values, or `null` when no test identity has been entered.",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PartnerDraftX12Identity"
+            },
+            {
+              "type": [
+                "object",
+                "null"
+              ],
+              "enum": [
+                null
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "PartnerDraftX12Identity": {
+      "type": "object",
+      "required": [
+        "isaQualifier",
+        "isaId",
+        "gsId"
+      ],
+      "properties": {
+        "isaQualifier": {
+          "type": "string",
+          "description": "Draft ISA qualifier. Attaching an AS2 connection requires exactly 2 characters."
+        },
+        "isaId": {
+          "type": "string",
+          "description": "Draft ISA id. Attaching an AS2 connection requires between 1 and 15 characters inclusive."
+        },
+        "gsId": {
+          "type": "string",
+          "description": "Draft GS id. Attaching an AS2 connection requires between 1 and 15 characters inclusive."
+        }
+      }
+    },
+    "ConfigurationPartnerSeparatorSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "elementSeparator",
+        "subElementSeparator",
+        "segmentTerminator",
+        "repetitionSeparator"
+      ],
+      "properties": {
+        "elementSeparator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1
+        },
+        "subElementSeparator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1
+        },
+        "segmentTerminator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1
+        },
+        "repetitionSeparator": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 1,
+          "description": "Repetition separator, or `null` when the selected X12 version does not use one."
+        }
+      }
+    },
+    "ConfigurationMappingResourceDocument": {
+      "description": "Portable desired state for one published mapping. Executable source is stored in the separately hashed `SOURCE` file named by the transform.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "metadata",
+        "spec"
+      ],
+      "properties": {
+        "apiVersion": {
+          "$ref": "#/$defs/ConfigurationDocumentApiVersion"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "Mapping"
+          ]
+        },
+        "metadata": {
+          "$ref": "#/$defs/ConfigurationResourceMetadata"
+        },
+        "spec": {
+          "$ref": "#/$defs/ConfigurationMappingSpec"
+        }
+      }
+    },
+    "ConfigurationMappingSpec": {
+      "description": "Published mapping configuration without its database id, API ETag, or server-resolved syntax-tree provenance. The partner reference and source reference are portable bundle values.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "partnerKey",
+        "direction",
+        "x12Version",
+        "functionalIdentifierCode",
+        "transactionSetIdentifierCode",
+        "transform",
+        "output",
+        "runtime"
+      ],
+      "properties": {
+        "regressionCases": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "description": "Optional saved editor tests. Omit when empty; sort by unique case id. The canonical JSON array must fit within 256 KiB. Fixtures enter configuration and Git history, so use sanitized sample data. Editing only these cases does not change the live mapping or refresh scenario bindings. Stored cases do not assert a passing result and do not gate apply.\n",
+          "items": {
+            "$ref": "#/$defs/MappingRegressionCase"
+          }
+        },
+        "partnerKey": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Portable key of the partner resource this mapping handles."
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "INCOMING",
+            "OUTGOING"
+          ]
+        },
+        "x12Version": {
+          "type": "string",
+          "description": "Normalized X12 version, such as `4010`."
+        },
+        "functionalIdentifierCode": {
+          "type": "string",
+          "description": "X12 GS01 functional identifier enum name."
+        },
+        "transactionSetIdentifierCode": {
+          "type": "string",
+          "description": "X12 ST01 transaction-set identifier without a leading underscore."
+        },
+        "transform": {
+          "$ref": "#/$defs/ConfigurationMappingTransform"
+        },
+        "output": {
+          "$ref": "#/$defs/ConfigurationMappingOutput"
+        },
+        "businessKey": {
+          "$ref": "#/$defs/MappingBusinessKey"
+        },
+        "deliveredMetadata": {
+          "$ref": "#/$defs/MappingDeliveredMetadata"
+        },
+        "runtime": {
+          "$ref": "#/$defs/ConfigurationMappingRuntime"
+        }
+      }
+    },
+    "MappingRegressionCase": {
+      "description": "An exact-output test for the existing Mapper engines. Whitespace, line endings, ordering, and delimiters are significant. Incoming X12 Mapper requires application/edi-x12 and null params; its zero-based group and transaction selectors may be null. Outgoing JSLT/XSLT requires JSON/XML input and null selectors; params is an object or null. Outgoing cases may additionally select validateX12 to check the generated document against the mapping's X12 specification using the normal preview/send envelope preparation. No execution results or timestamps belong in this source document.\n",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "comparison",
+        "input",
+        "contentType",
+        "params",
+        "functionalGroupIndex",
+        "transactionIndex",
+        "expectedOutput"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$",
+          "maxLength": 64
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "\\S"
+        },
+        "comparison": {
+          "type": "string",
+          "enum": [
+            "EXACT_TEXT"
+          ]
+        },
+        "validateX12": {
+          "type": "boolean",
+          "description": "Optional outgoing-only document validation in addition to exact-text comparison. Defaults to false when omitted. Complete document bodies are wrapped for validation; partial fragments need not opt in. Does not send EDI or prove business correctness or partner acceptance."
+        },
+        "input": {
+          "type": "string",
+          "maxLength": 65536
+        },
+        "contentType": {
+          "type": "string",
+          "enum": [
+            "application/edi-x12",
+            "application/json",
+            "application/xml",
+            "text/xml"
+          ]
+        },
+        "params": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
+        "functionalGroupIndex": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "transactionIndex": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "expectedOutput": {
+          "type": "string",
+          "maxLength": 65536
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "contentType": {
+                "const": "application/edi-x12"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "type": "null"
+              },
+              "validateX12": {
+                "const": false
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "functionalGroupIndex": {
+                "type": "null"
+              },
+              "transactionIndex": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ConfigurationMappingTransform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "fileName",
+        "sourcePath",
+        "sourceSha256"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "X12_MAPPER",
+            "XSLT",
+            "JSLT"
+          ],
+          "description": "Executable mapping language."
+        },
+        "fileName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Source-controlled transform filename shown in workspace and transaction provenance."
+        },
+        "sourcePath": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._/-]+$",
+          "description": "Relative path of the corresponding `SOURCE` file in this bundle."
+        },
+        "sourceSha256": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ConfigurationSha256"
+            }
+          ],
+          "description": "SHA-256 of the exact UTF-8 mapping source bytes at `sourcePath`."
+        }
+      }
+    },
+    "ConfigurationMappingOutput": {
+      "description": "Desired delivery behavior preserved in portable mapping configuration. Unlike the read-only delivery field on mapping responses, this field is part of the hashed configuration submitted for plan and apply. Incoming maps use MAPPED_OUTPUTS or TRANSACTION_RECORD; outgoing maps use OUTBOUND_AS2.\n",
+      "allOf": [
+        {
+          "$ref": "#/$defs/MappingOutput"
+        },
+        {
+          "type": "object",
+          "required": [
+            "delivery"
+          ],
+          "properties": {
+            "delivery": {
+              "$ref": "#/$defs/MappingOutputDelivery"
+            }
+          }
+        }
+      ]
+    },
+    "MappingOutput": {
+      "type": "object",
+      "required": [
+        "contentType"
+      ],
+      "properties": {
+        "contentType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Mapped payload content type for incoming maps; source content type selected by outgoing maps."
+        },
+        "purpose": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/MappingPurpose"
+            }
+          ],
+          "default": "PROCESSING",
+          "description": "Defaults to `PROCESSING` when omitted. Incoming mappings may also use `ACKNOWLEDGMENT`; outgoing mappings use `PROCESSING`."
+        }
+      }
+    },
+    "MappingPurpose": {
+      "type": "string",
+      "description": "Purpose of the runtime map that produced this output. `PROCESSING` means the output is for the normal application workflow. `ACKNOWLEDGMENT` means the output is an automatically generated response document.\n",
+      "enum": [
+        "PROCESSING",
+        "ACKNOWLEDGMENT"
+      ],
+      "example": "PROCESSING"
+    },
+    "MappingOutputDelivery": {
+      "type": "string",
+      "description": "Safe delivery category without infrastructure identifiers:\n\n- `MAPPED_OUTPUTS`: managed polling and per-partner webhook delivery\n- `TRANSACTION_RECORD`: incoming result retained on the transaction record\n- `OUTBOUND_AS2`: outbound source-to-X12 transform used by AS2 send APIs\n",
+      "enum": [
+        "MAPPED_OUTPUTS",
+        "TRANSACTION_RECORD",
+        "OUTBOUND_AS2"
+      ]
+    },
+    "MappingBusinessKey": {
+      "type": "object",
+      "required": [
+        "name",
+        "extractor"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Stable customer-facing label for the extracted value, such as `purchaseOrderNumber`.",
+          "example": "purchaseOrderNumber"
+        },
+        "extractor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "description": "Incoming X12 mapper expression used to persist the searchable business-key value.",
+          "example": "BEG03"
+        }
+      }
+    },
+    "MappingDeliveredMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Selects optional source and mapping context included in `GET /v1/mapped-outputs` message objects and the webhook's nested `message` object. Every field defaults to `true`. Setting a field to `false` omits its corresponding message property; queue identifiers, receipt handles, payload, content type, purpose, and business key remain present. Webhook-envelope routing fields such as `tenantId` and `partnerId` also remain present.\n",
+      "properties": {
+        "partner": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include `partnerName` and tenant-scoped `partnerId` in the mapped-output message."
+        },
+        "transactionTimestamp": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include the source transaction's persisted `transactionTimestamp`."
+        },
+        "transactionSet": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include `transactionSet` and the equivalent `edi.transactionGroupType` value."
+        },
+        "transactionControlNumber": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include `controlNumbers.transaction` (X12 ST02)."
+        },
+        "functionalGroupControlNumber": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include `controlNumbers.functionalGroup` (X12 GS06)."
+        },
+        "x12Version": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include `edi.x12Version`, derived from the parsed interchange version."
+        },
+        "functionalIdentifierCode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include `edi.functionalIdentifierCode` (X12 GS01)."
+        },
+        "segmentTerminator": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include `edi.segmentTerminator`."
+        },
+        "mappingSourceHash": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include `mapping.fileSha256Hash`, the Base64-encoded SHA-256 hash of the map source that generated this output."
+        }
+      }
+    },
+    "ConfigurationMappingRuntime": {
+      "description": "Exact advanced runtime values preserved by workspace authoring and deterministic export. Incoming mappings contain `activeAttributes`; outgoing mappings contain `extraFields`. Most integrations should use the stable `deliveredMetadata` and `output.delivery` fields instead. These maps exist so source-control exports do not discard established runtime behavior that is outside the closed customer-facing selectors.\n",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "activeAttributes": {
+          "type": "object",
+          "description": "Complete incoming runtime attribute selection, keyed by the established mapping-runtime attribute name.",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        },
+        "extraFields": {
+          "type": "object",
+          "description": "Complete outgoing runtime metadata preserved with the transform.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionResourceDocument": {
+      "title": "ModernEDI configuration ScenarioDefinition",
+      "description": "Optional scenario configuration in the same reviewed bundle as connections, partners and maps. Retirement removes current configuration without deleting published revisions or run evidence.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "metadata",
+        "spec"
+      ],
+      "properties": {
+        "apiVersion": {
+          "enum": [
+            "modernedi.com/v1"
+          ],
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "ScenarioDefinition"
+          ],
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "key"
+          ],
+          "properties": {
+            "key": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "description": "Stable resource key; retain it when copying configuration to another workspace."
+            }
+          }
+        },
+        "spec": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source"
+          ],
+          "properties": {
+            "source": {
+              "title": "ModernEDI ScenarioDefinition v1",
+              "description": "Maps define how documents are processed; scenarios define and prove the business conversation those maps implement. A ScenarioDefinition is the portable recipe for that conversation: who exchanges each X12 business document, which documents belong together, what order and repetition are allowed, and what evidence must pass. Tenant partners, syntax trees, mappings, and executable targets belong in a ScenarioBinding.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "apiVersion",
+                "kind",
+                "metadata",
+                "spec"
+              ],
+              "properties": {
+                "$schema": {
+                  "enum": [
+                    "https://www.modernedi.com/docs/scenarios/schemas/scenario-definition-v1.schema.json"
+                  ],
+                  "type": "string",
+                  "description": "Optional portable tooling hint. It does not participate in the definition's canonical content hash."
+                },
+                "apiVersion": {
+                  "enum": [
+                    "modernedi.com/scenario/v1"
+                  ],
+                  "type": "string",
+                  "description": "Wire-contract version for the generally available ScenarioDefinition contract."
+                },
+                "kind": {
+                  "enum": [
+                    "ScenarioDefinition"
+                  ],
+                  "type": "string",
+                  "description": "Discriminator for a scenario definition document."
+                },
+                "metadata": {
+                  "$ref": "#/$defs/ConfigurationScenarioDefinitionMetadata"
+                },
+                "spec": {
+                  "$ref": "#/$defs/ConfigurationScenarioDefinitionSpec"
+                }
+              }
+            }
+          }
+        }
+      },
+      "externalDocs": {
+        "description": "Complete JSON Schema, including conditional constraints",
+        "url": "https://www.modernedi.com/docs/scenarios/schemas/configuration-scenario-definition-v1.schema.json"
+      }
+    },
+    "ConfigurationScenarioDefinitionMetadata": {
+      "title": "Definition metadata",
+      "description": "Immutable identity of a published definition. The identity tuple is namespace, key, and version; contentSha256 is computed when the definition is published.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "namespace",
+        "key",
+        "version"
+      ],
+      "properties": {
+        "namespace": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionNamespace"
+        },
+        "key": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken",
+          "description": "Stable definition key within the namespace."
+        },
+        "version": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionArtifactVersion"
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionNamespace": {
+      "type": "string",
+      "maxLength": 253,
+      "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$",
+      "description": "A lowercase, DNS-like ownership namespace."
+    },
+    "ConfigurationScenarioDefinitionToken": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,127}$",
+      "description": "A stable identifier beginning with a letter and containing at most 128 letters, digits, underscores, or hyphens."
+    },
+    "ConfigurationScenarioDefinitionArtifactVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^(?!\\s)(?!.*\\s$)[^\\u0000-\\u001F\\u007F]+$",
+      "description": "A trim-exact artifact version with no control characters. This versions a published definition; it is separate from apiVersion."
+    },
+    "ConfigurationScenarioDefinitionSpec": {
+      "title": "Scenario specification",
+      "description": "The business-conversation recipe. Actors name the business roles, steps name their X12 document exchanges, and transitions state how those exchanges relate. ModernEDI also verifies unique IDs, references, a connected conversation, and the absence of ordinary transition cycles during Validate and Publish. Omitted transitions, assertions, parameters, checkpoints, or branches mean empty arrays; published JSON materializes every collection.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actors",
+        "steps"
+      ],
+      "properties": {
+        "actors": {
+          "type": "array",
+          "description": "Business roles participating in the conversation. Every actor ID must be unique.",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioDefinitionActor"
+          }
+        },
+        "steps": {
+          "type": "array",
+          "description": "Business-document exchanges. Every step ID must be unique and must reference two different declared actors.",
+          "minItems": 1,
+          "maxItems": 500,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioDefinitionStep"
+          }
+        },
+        "transitions": {
+          "type": "array",
+          "description": "Rules connecting document steps. For example, an 810 invoice can follow its matching 850 purchase order, a later 860 can supersede an earlier order change, and an ocean 303 can cancel a matching 301 booking confirmation. Transition IDs must be unique. Except for a same-step supersedes revision chain, ordinary next-document paths cannot loop and every step must belong to one connected conversation.",
+          "default": [],
+          "maxItems": 2000,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioDefinitionTransition"
+          }
+        },
+        "assertions": {
+          "type": "array",
+          "description": "Run-level facts that must hold across one or more observed step occurrences. Assertion IDs must be unique.",
+          "default": [],
+          "maxItems": 1000,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioDefinitionAssertion"
+          }
+        },
+        "parameters": {
+          "type": "array",
+          "description": "Prepared values supplied when a run starts. Parameters declare only their semantic type, required flag, and optional default; bindings and runtime APIs supply values.",
+          "default": [],
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioDefinitionParameter"
+          }
+        },
+        "checkpoints": {
+          "type": "array",
+          "description": "Named completion events emitted after a step finishes a declared processing stage. A checkpoint can trigger a choice between allowed next steps. For example, a bookingDisposition checkpoint emitted after an X12 301 booking confirmation can choose between an X12 303 cancellation and X12 304 shipping instructions.",
+          "default": [],
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioDefinitionCheckpoint"
+          }
+        },
+        "branches": {
+          "type": "array",
+          "description": "Explicit choices between allowed next-document transitions, evaluated only after a named checkpoint is emitted. For example, after an X12 301 booking confirmation emits bookingDisposition, cancelRequested=true can select the X12 303 cancellation path and otherwise can select X12 304 shipping instructions. Choices are evaluated in deterministic rounds from the steps already available at the start of that round; a destination document cannot provide the fact that selects its own path.",
+          "default": [],
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioDefinitionBranch"
+          }
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionActor": {
+      "title": "Actor",
+      "description": "A business role. Bindings later connect each role to this workspace or a trading partner.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionStep": {
+      "title": "Step",
+      "description": "One directed X12 business-document exchange. Functional acknowledgments (997/999) are evidence requirements, not business steps.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "fromActor",
+        "toActor",
+        "transaction",
+        "occurrence",
+        "facts",
+        "pipeline"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken",
+          "description": "Stable ID used by transitions, assertions, and bindings."
+        },
+        "fromActor": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken",
+          "description": "ID of the actor sending this business document."
+        },
+        "toActor": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken",
+          "description": "ID of the actor receiving this business document; it must differ from fromActor."
+        },
+        "transaction": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionTransaction"
+        },
+        "occurrence": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionOccurrence"
+        },
+        "assurance": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionAssurance"
+        },
+        "facts": {
+          "type": "array",
+          "description": "Typed semantic facts exposed by this step. Use an empty array when the step exposes none. Declarations name the stable ABI only; extraction provenance belongs to runtime capability and binding layers.",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioDefinitionFactDeclaration"
+          }
+        },
+        "pipeline": {
+          "type": "array",
+          "description": "Ordered abstract processing stages for each step occurrence. Stages describe behavior without naming mapper or transport artifacts.",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioDefinitionPipelineStage"
+          }
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionTransaction": {
+      "title": "Transaction",
+      "description": "The business document carried by a step. The server verifies the transaction-set code against ModernEDI's X12 catalog.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "standard",
+        "transactionSet",
+        "businessUsage"
+      ],
+      "properties": {
+        "standard": {
+          "enum": [
+            "X12"
+          ],
+          "type": "string",
+          "description": "Transaction standard. v1 supports X12."
+        },
+        "transactionSet": {
+          "type": "string",
+          "pattern": "^(?!(?:997|999)$)[0-9]{3}$",
+          "description": "Known three-digit X12 business transaction set, such as 850, 855, 856, 810, 875, 880, 940, 945, 204, 214, 300, 301, or 315. Use assurance for 997/999 acknowledgments."
+        },
+        "businessUsage": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken",
+          "description": "Scenario-specific semantic role, such as purchase_order, shipment_notice, or ocean_status. It is intentionally more precise than the transaction-set code."
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionOccurrence": {
+      "title": "Occurrence bounds",
+      "description": "How many documents this step may contribute to one run and the rule that says when no more are expected. One observed document is one occurrence. For example, an 850 order can be exactly once while 856 shipment notices can repeat. The server also enforces min <= max.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "min",
+        "max"
+      ],
+      "properties": {
+        "min": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Minimum accepted count once a reachable step closes. Zero is a no-document outcome only when expected_count resolves to 0 or branch selection makes the step unreachable; zero alone does not close a stream."
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Structural per-step ceiling for authored occurrences. Validate and Apply also enforce one conservative run-state capacity budget across all steps, paired documents, checks, and durable evidence."
+        },
+        "closure": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionOccurrenceClosure",
+          "description": "The closure rule: the objective signal that no more documents are expected for this step. It may be omitted while authoring; Publish writes fixed when min equals max and max_reached otherwise. Because max_reached waits for the maximum, a min-zero unbranched step must instead use expected_count so a zero-document outcome is explicit."
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionOccurrenceClosure": {
+      "title": "Occurrence closure",
+      "description": "The objective rule that tells a run no more documents are expected for one repeated step. fixed closes at the required fixed count; max_reached closes only at the authored maximum; expected_count closes at a required or defaulted run parameter, including an explicit zero. Branch selection supplies the no-document outcome for an unselected destination. There is no manual-close operation in v1.",
+      "oneOf": [
+        {
+          "title": "Fixed closure",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "fixed"
+              ],
+              "type": "string",
+              "description": "Close after the fixed min=max count is observed. Example: an 850 step with min=1 and max=1 closes after its one purchase order."
+            }
+          }
+        },
+        {
+          "title": "Maximum-reached closure",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "max_reached"
+              ],
+              "type": "string",
+              "description": "Close only when the declared maximum count is observed. Example: a 315 status step with max=2 closes after the second status document."
+            }
+          }
+        },
+        {
+          "title": "Expected-count closure",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "parameter"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "expected_count"
+              ],
+              "type": "string",
+              "description": "Close when the number of occurrences reaches an exact integer supplied by a required run parameter or a declared default. The value must fit this step's occurrence bounds; steps sharing one count parameter must have overlapping bounds. Example: expectedShipmentCount=2 closes a repeated 945 step after two shipping-advice documents."
+            },
+            "parameter": {
+              "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+            }
+          }
+        }
+      ]
+    },
+    "ConfigurationScenarioDefinitionAssurance": {
+      "title": "Evidence requirements",
+      "description": "Operational evidence required for each occurrence of this step. Duplicate requirement types are rejected by the server.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirements"
+      ],
+      "properties": {
+        "requirements": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioDefinitionAssuranceRequirement"
+          },
+          "allOf": [
+            {},
+            {},
+            {},
+            {}
+          ]
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionAssuranceRequirement": {
+      "title": "Evidence requirement",
+      "description": "One observable proof required for a step. For example, mapping_succeeded proves that the selected map ran, while functional_or_implementation_acknowledgment_accepted proves accepted 997 or 999 evidence. Outgoing mapping proof may predate the document occurrence because mapping runs immediately before exchange; receipts and acknowledgments may not. A deadline is measured from the document occurrence to the terminal evidence time, and requires that evidence's own timestamp. Terminal evidence timestamped after the run's evaluation time is invalid.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "mapping_succeeded",
+            "transport_receipt_accepted",
+            "interchange_acknowledgment_accepted",
+            "functional_or_implementation_acknowledgment_accepted"
+          ],
+          "description": "mapping_succeeded proves mapper execution; transport_receipt_accepted proves the AS2 receipt; interchange_acknowledgment_accepted proves TA1 acceptance; functional_or_implementation_acknowledgment_accepted proves accepted 997 or 999 evidence."
+        },
+        "within": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionPositiveDuration",
+          "description": "Optional deadline from the business document occurrence to terminal evidence. An outgoing mapping completed before exchange satisfies the lower timing boundary, but its own source timestamp is still required; missing terminal source time cannot prove a deadline."
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionPositiveDuration": {
+      "type": "string",
+      "format": "duration",
+      "pattern": "^P(?=.+)(?!0+(?:D|T(?:0+H)?(?:0+M)?(?:0+(?:\\.0+)?S)?$))(?:[0-9]+D)?(?:T(?=[0-9])(?:[0-9]+H)?(?:[0-9]+M)?(?:[0-9]+(?:\\.[0-9]+)?S)?)?$",
+      "description": "A positive ISO 8601 duration accepted by java.time.Duration, no longer than P365D. Examples: PT30M, PT4H, P2D. The server enforces the upper bound."
+    },
+    "ConfigurationScenarioDefinitionFactDeclaration": {
+      "title": "Typed fact declaration",
+      "description": "Stable semantic ABI for one fact exposed by a step occurrence. The binding/runtime capability separately defines extraction provenance.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type",
+        "cardinality",
+        "normalization",
+        "sensitivity"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken",
+          "description": "Stable fact name used by discriminated fact operands and binding-side fact sources."
+        },
+        "type": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionValueType"
+        },
+        "elementType": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionScalarType",
+          "description": "Required exactly when type is list or set; nested collections are not supported."
+        },
+        "cardinality": {
+          "type": "string",
+          "enum": [
+            "one",
+            "optional"
+          ],
+          "description": "Presence of the typed value on each occurrence. Collection multiplicity is expressed by type list/set, never by a separate many cardinality."
+        },
+        "normalization": {
+          "type": "array",
+          "description": "Ordered, deterministic normalization applied before typed evaluation.",
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "trim",
+              "collapse_whitespace",
+              "uppercase",
+              "lowercase",
+              "decimal_canonical"
+            ]
+          }
+        },
+        "sensitivity": {
+          "type": "string",
+          "enum": [
+            "business",
+            "personal",
+            "financial",
+            "health",
+            "restricted"
+          ],
+          "description": "Data-handling classification carried with evidence and diagnostics."
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionValueType": {
+      "type": "string",
+      "enum": [
+        "string",
+        "decimal",
+        "date",
+        "time",
+        "timestamp",
+        "boolean",
+        "list",
+        "set"
+      ],
+      "description": "Closed evaluator value type. list and set contain scalar values only and require elementType."
+    },
+    "ConfigurationScenarioDefinitionScalarType": {
+      "type": "string",
+      "enum": [
+        "string",
+        "decimal",
+        "date",
+        "time",
+        "timestamp",
+        "boolean"
+      ],
+      "description": "Closed scalar type used directly or as the element type of list and set values."
+    },
+    "ConfigurationScenarioDefinitionPipelineStage": {
+      "title": "Composed step pipeline stage",
+      "description": "One named action in the ordered processing of an observed document. A definition says prepare, map, exchange, extract facts, check evidence, or emit a checkpoint; the binding later selects the concrete map, partner, or adapter. Keeping those artifact IDs out of the definition lets the same conversation recipe be reused by another tenant.",
+      "oneOf": [
+        {
+          "title": "Prepare stage",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "kind",
+            "parameters"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+            },
+            "kind": {
+              "enum": [
+                "prepare"
+              ],
+              "type": "string",
+              "description": "Journal that named run parameters are available. Every referenced parameter must either be required at run start or declare a default."
+            },
+            "parameters": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 100,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+              }
+            }
+          }
+        },
+        {
+          "title": "Map stage",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "kind"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+            },
+            "kind": {
+              "enum": [
+                "map"
+              ],
+              "type": "string",
+              "description": "Confirm the exact runtime mapping selected by an applied binding. A step may declare this stage once, immediately next to exchange. Apply requires it before exchange for outgoing documents and after exchange for incoming documents."
+            }
+          }
+        },
+        {
+          "title": "Exchange stage",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "kind"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+            },
+            "kind": {
+              "enum": [
+                "exchange"
+              ],
+              "type": "string",
+              "description": "Observe or perform the business-document exchange. Exactly one is required per step."
+            }
+          }
+        },
+        {
+          "title": "Extract stage",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "kind",
+            "facts"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+            },
+            "kind": {
+              "enum": [
+                "extract"
+              ],
+              "type": "string",
+              "description": "Materialize declared semantic facts using binding/runtime-provided sources. Every declared fact must appear in exactly one extract stage."
+            },
+            "facts": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 100,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+              }
+            }
+          }
+        },
+        {
+          "title": "Assure stage",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "kind"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+            },
+            "kind": {
+              "enum": [
+                "assure"
+              ],
+              "type": "string",
+              "description": "Evaluate the step's declared operational evidence requirements. A step may declare this stage at most once."
+            }
+          }
+        },
+        {
+          "title": "Checkpoint stage",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "kind",
+            "checkpoint"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+            },
+            "kind": {
+              "enum": [
+                "checkpoint"
+              ],
+              "type": "string",
+              "description": "Emit a declared global checkpoint after the preceding stages complete. In v1, the containing step must have occurrence max 1 so the emitting occurrence is unambiguous."
+            },
+            "checkpoint": {
+              "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+            }
+          }
+        }
+      ]
+    },
+    "ConfigurationScenarioDefinitionTransition": {
+      "title": "Transition",
+      "description": "A rule from one document step to another. Correlations identify which actual documents belong together. follows models ordinary order, such as a matching 810 invoice after an 850 order. supersedes records a replacement, such as a later 860 order change replacing the prior 850 or 860. cancels records a removal, such as an ocean 303 cancellation for a 301 booking confirmation. Supersedes and cancels inspect every stored observation before any replacement or cancellation is applied; they do not make an otherwise unavailable next-document path available and cannot themselves be branch alternatives.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "fromStep",
+        "toStep",
+        "relationship",
+        "matching"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+        },
+        "fromStep": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken",
+          "description": "Predecessor step ID."
+        },
+        "toStep": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken",
+          "description": "Successor step ID. It may equal fromStep only for a supersedes transition that uses previous matching; cancellation is represented by a distinct cancellation-document step."
+        },
+        "relationship": {
+          "type": "string",
+          "enum": [
+            "follows",
+            "supersedes",
+            "cancels"
+          ],
+          "description": "Choose follows when a matched later document must occur at or after the earlier one, such as an 810 invoice after its 850 order. Choose supersedes when the later document replaces the matched earlier occurrence, such as an 860 order change replacing an 850 or prior 860. Choose cancels when the later document cancels the matched earlier occurrence, such as an ocean 303 cancelling a 301 booking confirmation. supersedes and cancels require effect to say when the change begins and whether later checks keep using the original document or reevaluate with the replacement/removal. Business labels such as acknowledges, reports status, or settles belong in the transition ID and prose unless an assertion or evidence requirement actually verifies them."
+        },
+        "within": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionPositiveDuration",
+          "description": "Optional maximum elapsed time from the correlated fromStep occurrence to the toStep occurrence."
+        },
+        "correlations": {
+          "type": "array",
+          "description": "Conditions the scenario evaluator uses to pair actual source and target documents. For example, compare the purchase-order number extracted from an 850 with the purchase-order number extracted from an 810. Correlation IDs must be unique within this transition.",
+          "minItems": 0,
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioDefinitionCorrelation"
+          }
+        },
+        "matching": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionOccurrenceMatching",
+          "description": "Required quantification and pairing semantics for concrete occurrences; the server does not infer them from correlations."
+        },
+        "effect": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionRevisionEffect",
+          "description": "Required effective-time and downstream behavior for supersedes and cancels. Forbidden for follows."
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionCorrelation": {
+      "title": "Correlation",
+      "description": "A condition that decides whether two actual documents belong to the same transition pair. equal can match the purchase-order number on an 850 and 810; same_set can compare their item sets; reply_link uses ModernEDI's stored reply relationship and accepts no fact operands.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "operator"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+        },
+        "operator": {
+          "type": "string",
+          "enum": [
+            "equal",
+            "same_set",
+            "reply_link"
+          ]
+        },
+        "left": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionFactOperand",
+          "description": "For fact operators, must reference the transition's fromStep."
+        },
+        "right": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionFactOperand",
+          "description": "For fact operators, must reference the transition's toStep."
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionFactOperand": {
+      "title": "Fact operand",
+      "description": "A declared semantic fact from a concrete step occurrence.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "stepId",
+        "fact",
+        "projection"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "fact"
+          ],
+          "type": "string"
+        },
+        "stepId": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+        },
+        "fact": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken",
+          "description": "Name from the referenced step's facts declaration."
+        },
+        "projection": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionFactProjection",
+          "description": "How values are selected or aggregated across this step's occurrences. list/set require occurrence max greater than 1 and a scalar declared fact."
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionFactProjection": {
+      "type": "string",
+      "enum": [
+        "value",
+        "list",
+        "set",
+        "first",
+        "latest"
+      ],
+      "description": "Select one declared per-occurrence fact value, aggregate values across occurrences as a list or set, or select the first/latest observed occurrence. Correlations require value."
+    },
+    "ConfigurationScenarioDefinitionOccurrenceMatching": {
+      "title": "Occurrence matching",
+      "description": "How actual repeated documents are paired across a transition, plus what happens to documents with no match. correlate pairs documents whose declared fact or reply-link conditions pass; position pairs by observation order; previous pairs each revision with the immediately preceding occurrence of the same step, such as the second 860 order change with the first.",
+      "oneOf": [
+        {
+          "title": "Correlation matching",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "strategy",
+            "quantifiers",
+            "unmatched"
+          ],
+          "properties": {
+            "strategy": {
+              "enum": [
+                "correlate"
+              ],
+              "type": "string",
+              "description": "Pair occurrences whose declared correlation conditions pass."
+            },
+            "quantifiers": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 10,
+              "items": {
+                "$ref": "#/$defs/ConfigurationScenarioDefinitionMatchQuantifier"
+              }
+            },
+            "unmatched": {
+              "type": "string",
+              "enum": [
+                "fail",
+                "record"
+              ]
+            }
+          }
+        },
+        {
+          "title": "Positional matching",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "strategy",
+            "quantifiers",
+            "unmatched"
+          ],
+          "properties": {
+            "strategy": {
+              "enum": [
+                "position"
+              ],
+              "type": "string",
+              "description": "Pair source and target occurrences by stable observation order; correlations are forbidden."
+            },
+            "quantifiers": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 10,
+              "items": {
+                "$ref": "#/$defs/ConfigurationScenarioDefinitionMatchQuantifier"
+              }
+            },
+            "unmatched": {
+              "type": "string",
+              "enum": [
+                "fail",
+                "record"
+              ]
+            }
+          }
+        },
+        {
+          "title": "Previous-occurrence matching",
+          "description": "For a same-step supersedes transition whose step occurrence max is at least 2, pair occurrence n with n-1. The first occurrence is recorded as the initial revision, so both matching.unmatched and effect.unmatched must be record. A separate cross-step transition can link an initial 850 to the first 860. cancels uses a distinct cancellation-document step and cannot use previous matching.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "strategy",
+            "quantifiers",
+            "unmatched"
+          ],
+          "properties": {
+            "strategy": {
+              "enum": [
+                "previous"
+              ],
+              "type": "string"
+            },
+            "quantifiers": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "scope"
+                ],
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "every"
+                    ],
+                    "type": "string"
+                  },
+                  "scope": {
+                    "enum": [
+                      "to"
+                    ],
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "unmatched": {
+              "enum": [
+                "record"
+              ],
+              "type": "string",
+              "description": "Record the first occurrence because it has no predecessor; later occurrences must match their immediate predecessor."
+            }
+          }
+        }
+      ]
+    },
+    "ConfigurationScenarioDefinitionMatchQuantifier": {
+      "title": "Occurrence match quantifier",
+      "description": "An explicit requirement over source occurrences, target occurrences, matched pairs, or matches per endpoint occurrence.",
+      "oneOf": [
+        {
+          "title": "Any quantifier",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "scope"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "any"
+              ],
+              "type": "string"
+            },
+            "scope": {
+              "type": "string",
+              "enum": [
+                "from",
+                "to",
+                "pairs",
+                "per_from",
+                "per_to"
+              ]
+            }
+          }
+        },
+        {
+          "title": "Every quantifier",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "scope"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "every"
+              ],
+              "type": "string"
+            },
+            "scope": {
+              "type": "string",
+              "enum": [
+                "from",
+                "to",
+                "pairs",
+                "per_from",
+                "per_to"
+              ]
+            }
+          }
+        },
+        {
+          "title": "Exact-count quantifier",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "scope",
+            "count"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "exactly"
+              ],
+              "type": "string"
+            },
+            "scope": {
+              "type": "string",
+              "enum": [
+                "from",
+                "to",
+                "pairs",
+                "per_from",
+                "per_to"
+              ]
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          }
+        }
+      ]
+    },
+    "ConfigurationScenarioDefinitionRevisionEffect": {
+      "title": "Revision or cancellation effect",
+      "description": "What a matched replacement or cancellation changes. Raw immutable observation history means every received document remains stored unchanged; the revision rule changes only the run's interpreted business view. A revision transition does not open a next-document path by itself. Each branch-decision round first snapshots the steps already allowed; its conditions see only active reevaluate effects whose original and later-document steps are both in that snapshot, and a chosen path becomes available only in the next round. After branch selection, a revision affects checks only when both endpoint steps remain on the selected conversation path. If several active reevaluate effects target the same original document, the later effectiveAt wins; equal latest times fail with REVISION_EFFECT_CONFLICT instead of choosing arbitrarily.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "effectiveAt",
+        "downstream",
+        "unmatched"
+      ],
+      "properties": {
+        "effectiveAt": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionEffectiveAt",
+          "description": "When this replacement or cancellation begins to govern checks. Later active reevaluate effects take precedence for the same original document."
+        },
+        "downstream": {
+          "type": "string",
+          "enum": [
+            "retain",
+            "reevaluate"
+          ],
+          "description": "retain records the change and effective time but keeps using the original document for branch conditions, ordinary follows transitions, and assertions; for example, record an advisory 860 while later shipment checks still use the original 850. reevaluate recomputes those same consumers with the replacement or removal; for example, use the revised 860 values for later 856/810 checks, or remove a 301 booking confirmation after its 303 cancellation."
+        },
+        "unmatched": {
+          "type": "string",
+          "enum": [
+            "fail",
+            "record"
+          ],
+          "description": "Behavior when no prior effective occurrence can be revised or cancelled. previous matching requires record because the first occurrence is the initial revision and necessarily has no prior occurrence."
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionEffectiveAt": {
+      "title": "Revision effective time",
+      "description": "When a replacement or cancellation begins to govern the conversation. observed_at uses the time ModernEDI observed the later document. value uses an explicit timestamp, such as effectiveTimestamp extracted from an X12 860 order change. The value must be a timestamp, not only a date or clock time. A fact value belongs to the matched revision pair and must come from its source or later document; for a previous-matched same-step revision, it is read from the later revision occurrence.",
+      "oneOf": [
+        {
+          "title": "Time ModernEDI observed the revision",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "observed_at"
+              ],
+              "type": "string"
+            }
+          }
+        },
+        {
+          "title": "Business effective timestamp",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "value"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "value"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/ConfigurationScenarioDefinitionValueOperand",
+              "description": "Must resolve to a timestamp. For example, bind it to effectiveTimestamp extracted from the later X12 860. A fact operand requires value projection and one of the revision transition's endpoint steps; for a previous-matched same-step revision, it is read from the later revision occurrence."
+            }
+          }
+        }
+      ]
+    },
+    "ConfigurationScenarioDefinitionValueOperand": {
+      "title": "Value operand",
+      "description": "Closed discriminated union used by assertions, branch predicates, and effective-time expressions.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionFactOperand"
+        },
+        {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionParameterOperand"
+        },
+        {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionLiteralOperand"
+        }
+      ]
+    },
+    "ConfigurationScenarioDefinitionParameterOperand": {
+      "title": "Parameter operand",
+      "description": "A prepared run parameter usable in assertions, branch predicates, and effective-time expressions.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "parameter"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "parameter"
+          ],
+          "type": "string"
+        },
+        "parameter": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionLiteralOperand": {
+      "title": "Typed literal operand",
+      "description": "A closed typed JSON literal. list and set literals require scalar elementType and use a JSON array value.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "type",
+        "value"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "literal"
+          ],
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionValueType"
+        },
+        "elementType": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionScalarType"
+        },
+        "value": {
+          "description": "JSON value matching type and elementType. The server performs format and exact type validation."
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionAssertion": {
+      "title": "Assertion",
+      "description": "A fact rule that must hold for the run to pass. For example, exists can require every 810 invoice to expose invoiceTotal, sum_equal can compare shipped and invoiced totals, and monotonic can require successive 315 status timestamps to move forward. Binary operators require right; unary operators reject it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "operator",
+        "left"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+        },
+        "operator": {
+          "type": "string",
+          "enum": [
+            "equal",
+            "not_equal",
+            "exists",
+            "unique",
+            "same_set",
+            "subset",
+            "sum_equal",
+            "less_than_or_equal",
+            "greater_than_or_equal",
+            "monotonic"
+          ]
+        },
+        "left": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionValueOperand"
+        },
+        "right": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionValueOperand"
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionParameter": {
+      "title": "Prepared run parameter",
+      "description": "A typed value supplied when a run starts through the Workspace UI or API, or resolved from its declared default when optional.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "required"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken",
+          "description": "Stable name used by prepare stages, expected-count closure, and parameter operands."
+        },
+        "type": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionValueType"
+        },
+        "elementType": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionScalarType",
+          "description": "Required exactly when type is list or set."
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether the run must explicitly provide this value. A required parameter cannot also have a default."
+        },
+        "default": {
+          "description": "Optional JSON value used when the run omits a non-required parameter."
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionCheckpoint": {
+      "title": "Checkpoint declaration",
+      "description": "A named completion event emitted by exactly one checkpoint pipeline stage after its preceding stages finish. For example, an X12 301 booking-confirmation step can emit bookingDisposition after exchange and fact extraction, allowing the run to choose the cancellation or shipping-instructions path.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionBranch": {
+      "title": "Explicit branch",
+      "description": "A choice between mutually exclusive next-document paths after a named checkpoint. The checkpoint must be emitted by the alternatives' shared source step, so the decision precedes every controlled destination. The emitter must also necessarily observe at least one document; expected_count closure with occurrence min 0 cannot emit a branch checkpoint. All alternatives leave the same source step. Example: after a 301 booking confirmation emits bookingDisposition, choose the 303 cancellation path when cancelRequested=true; otherwise choose 304 shipping instructions. exactly_one must choose one path and therefore requires an otherwise fallback. at_most_one may choose no path. A round evaluates only evidence already available when that round began; its selection can make later steps available in the next round.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "mode",
+        "checkpoint",
+        "alternatives"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "exactly_one",
+            "at_most_one"
+          ]
+        },
+        "checkpoint": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+        },
+        "alternatives": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioDefinitionBranchAlternative"
+          },
+          "description": "at_most_one accepts one or more when alternatives; exactly_one requires at least two alternatives and exactly one otherwise."
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionBranchAlternative": {
+      "title": "Branch alternative",
+      "description": "One ordinary follows transition that a branch may select, either when its conditions pass or as the explicit otherwise fallback. For example, cancelRequested=true selects the 301-to-303 follows transition; otherwise selects 301-to-304. supersedes and cancels transitions are revision records, not branch alternatives.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "transitionId",
+        "conditions"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "when",
+            "otherwise"
+          ]
+        },
+        "transitionId": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken",
+          "description": "ID of a follows transition selected by this branch; supersedes and cancels transitions are not allowed."
+        },
+        "conditions": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioDefinitionPredicate"
+          },
+          "description": "Conditions may use parameters, literals, or facts from the alternatives' shared fromStep. They cannot read a destination step to select that destination."
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionPredicate": {
+      "title": "Branch predicate",
+      "description": "A yes/no condition evaluated after the branch's named checkpoint is emitted. For example, after an X12 301 emits bookingDisposition, compare the cancelRequested run parameter with true to select the X12 303 path. A fact condition must read the common source step of every alternative and that fact's extract stage must precede the checkpoint; it cannot read a destination document or later pipeline evidence to make that destination eligible. Every condition sees the conversation view from the start of the decision round, so one branch cannot use evidence made available by itself or a sibling branch in that round.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "operator",
+        "left"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+        },
+        "operator": {
+          "type": "string",
+          "enum": [
+            "equal",
+            "not_equal",
+            "exists",
+            "unique",
+            "same_set",
+            "subset",
+            "sum_equal",
+            "less_than_or_equal",
+            "greater_than_or_equal",
+            "monotonic"
+          ]
+        },
+        "left": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionValueOperand"
+        },
+        "right": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionValueOperand"
+        }
+      }
+    },
+    "ConfigurationScenarioBindingResourceDocument": {
+      "title": "ModernEDI configuration ScenarioBinding",
+      "description": "Optional scenario configuration in the same reviewed bundle as connections, partners and maps. Retirement removes current configuration without deleting published revisions or run evidence.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "metadata",
+        "spec"
+      ],
+      "properties": {
+        "apiVersion": {
+          "enum": [
+            "modernedi.com/v1"
+          ],
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "ScenarioBinding"
+          ],
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "key"
+          ],
+          "properties": {
+            "key": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "description": "Stable resource key; retain it when copying configuration to another workspace."
+            }
+          }
+        },
+        "spec": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source"
+          ],
+          "properties": {
+            "source": {
+              "title": "ModernEDI ScenarioBinding v1",
+              "description": "A tenant-scoped authoring binding that connects every actor and step in one immutable ScenarioDefinition to current workspace partners and executable targets. It references tenant artifacts by identity and contains no copied runtime configuration, credentials, private keys, or other secrets.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "apiVersion",
+                "kind",
+                "metadata",
+                "spec"
+              ],
+              "properties": {
+                "$schema": {
+                  "enum": [
+                    "https://www.modernedi.com/docs/scenarios/schemas/scenario-binding-v1.schema.json"
+                  ],
+                  "type": "string",
+                  "description": "Optional portable tooling hint. It does not participate in the binding's canonical content hash."
+                },
+                "apiVersion": {
+                  "enum": [
+                    "modernedi.com/scenario-binding-authoring/v1"
+                  ],
+                  "type": "string",
+                  "description": "Wire-contract version for tenant-authored scenario bindings."
+                },
+                "kind": {
+                  "enum": [
+                    "ScenarioBinding"
+                  ],
+                  "type": "string",
+                  "description": "Discriminator for a scenario binding document."
+                },
+                "metadata": {
+                  "$ref": "#/$defs/ConfigurationScenarioBindingMetadata"
+                },
+                "spec": {
+                  "$ref": "#/$defs/ConfigurationScenarioBindingSpec"
+                }
+              }
+            }
+          }
+        }
+      },
+      "externalDocs": {
+        "description": "Complete JSON Schema, including conditional constraints",
+        "url": "https://www.modernedi.com/docs/scenarios/schemas/configuration-scenario-binding-v1.schema.json"
+      }
+    },
+    "ConfigurationScenarioBindingMetadata": {
+      "title": "Binding metadata",
+      "description": "Editable identity and display name for this binding draft. Apply creates an immutable binding revision.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingToken",
+          "description": "Stable binding ID within the workspace."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "\\S",
+          "description": "Human-readable binding name. The server trims leading and trailing whitespace when canonicalizing."
+        }
+      }
+    },
+    "ConfigurationScenarioBindingToken": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,127}$",
+      "description": "A stable identifier beginning with a letter and containing at most 128 letters, digits, underscores, or hyphens."
+    },
+    "ConfigurationScenarioBindingSpec": {
+      "title": "Binding specification",
+      "description": "References one exact published definition and binds all of its actors and steps. Apply resolves and freezes authoritative artifacts for runtime use.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "definition",
+        "environment",
+        "actors",
+        "steps"
+      ],
+      "properties": {
+        "definition": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingDefinitionReference"
+        },
+        "environment": {
+          "type": "string",
+          "enum": [
+            "production",
+            "test"
+          ],
+          "description": "Required workspace traffic selector, frozen into the applied binding. Production and test traffic use the same deployed mappings; this does not deploy unpublished mappings or create another workspace. Runs use the selected AS2/X12 profile and keep transaction lookup, acknowledgments, and evidence in that environment, without falling back to the other profile."
+        },
+        "actors": {
+          "type": "array",
+          "description": "Exactly one binding for every definition actor. IDs must be unique; exactly one endpoint must be this workspace and at least one must be a current external partner.",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioBindingActorBinding"
+          }
+        },
+        "steps": {
+          "type": "array",
+          "description": "Exactly one binding for every definition step. IDs must be unique.",
+          "minItems": 1,
+          "maxItems": 500,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioBindingStepBinding"
+          }
+        }
+      }
+    },
+    "ConfigurationScenarioBindingDefinitionReference": {
+      "title": "Published definition reference",
+      "description": "Exact identity and canonical content hash returned by Publish or the scenario catalog. Apply fails closed if any part differs.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "namespace",
+        "key",
+        "version",
+        "contentSha256"
+      ],
+      "properties": {
+        "namespace": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingNamespace"
+        },
+        "key": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingToken"
+        },
+        "version": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingArtifactVersion"
+        },
+        "contentSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Lowercase SHA-256 digest of the canonical published definition."
+        }
+      }
+    },
+    "ConfigurationScenarioBindingNamespace": {
+      "type": "string",
+      "maxLength": 253,
+      "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$",
+      "description": "Lowercase namespace of the published ScenarioDefinition."
+    },
+    "ConfigurationScenarioBindingArtifactVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^(?!\\s)(?!.*\\s$)[^\\u0000-\\u001F\\u007F]+$",
+      "description": "Exact published definition version."
+    },
+    "ConfigurationScenarioBindingActorBinding": {
+      "title": "Actor binding",
+      "description": "Connects one definition actor to this workspace or a current trading partner.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actorId",
+        "endpoint"
+      ],
+      "properties": {
+        "actorId": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingToken",
+          "description": "Actor ID from the referenced ScenarioDefinition."
+        },
+        "endpoint": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingEndpoint"
+        }
+      }
+    },
+    "ConfigurationScenarioBindingEndpoint": {
+      "title": "Actor endpoint",
+      "description": "OneOf discriminator: workspace accepts only kind; partner also requires a positive tenant partner ID.",
+      "oneOf": [
+        {
+          "title": "Workspace endpoint",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "workspace"
+              ],
+              "type": "string",
+              "description": "The current tenant workspace."
+            }
+          }
+        },
+        {
+          "title": "Partner endpoint",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "partnerKey"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "partner"
+              ],
+              "type": "string"
+            },
+            "partnerKey": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "description": "Stable Partner resource key in this configuration bundle; resolved to a workspace ID during apply."
+            }
+          }
+        }
+      ]
+    },
+    "ConfigurationScenarioBindingStepBinding": {
+      "title": "Step binding",
+      "description": "Connects one definition step to an executable or observation target and binds every declared semantic fact to an implementation-guide source. syntaxTree is optional while authoring; Apply resolves an exact authoritative syntax-tree artifact before runtime execution.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stepId",
+        "target"
+      ],
+      "properties": {
+        "stepId": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingToken",
+          "description": "Step ID from the referenced ScenarioDefinition."
+        },
+        "syntaxTree": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingSyntaxTreeReference",
+          "description": "Optional explicit implementation-guide identity. Omit it to let Apply select the exact current syntax tree from the authoritative mapping or adapter; an applied runtime binding is always resolved and immutable."
+        },
+        "target": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingTarget"
+        },
+        "factSources": {
+          "type": "array",
+          "maxItems": 200,
+          "description": "One source for every fact declared by this ScenarioDefinition step. Omission is a deliberate authoring shorthand only when the step declares no facts; canonical Apply materializes an empty array. Server validation otherwise requires exact fact-name coverage. Collection shape, element type, cardinality, normalization, and sensitivity come only from the declaration and are intentionally not duplicated here.",
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioBindingFactSourceBinding"
+          }
+        }
+      }
+    },
+    "ConfigurationScenarioBindingSyntaxTreeReference": {
+      "title": "Syntax-tree reference",
+      "description": "Optional authoring-time pin to an exact X12 release and transaction set. Both fields are required when this object is present.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "x12Version",
+        "transactionSet"
+      ],
+      "properties": {
+        "x12Version": {
+          "type": "string",
+          "pattern": "^[Vv]?(?:00)?[1-9][0-9]{3}$",
+          "example": "004010",
+          "description": "X12 release token. Apply canonicalizes accepted forms to a six-digit release such as 004010."
+        },
+        "transactionSet": {
+          "type": "string",
+          "pattern": "^[0-9]{3}$",
+          "description": "Known three-digit X12 transaction set. The code must match the referenced definition step."
+        }
+      }
+    },
+    "ConfigurationScenarioBindingTarget": {
+      "title": "Step target",
+      "description": "OneOf discriminator selecting an evidence-constrained runtime mapping, a registered active executor adapter, or observation-only evidence.",
+      "oneOf": [
+        {
+          "title": "Runtime mapping target",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "mappingKey"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "runtime-mapping"
+              ],
+              "type": "string"
+            },
+            "mappingKey": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "description": "Stable Mapping resource key in this configuration bundle; resolved to a workspace ID during apply."
+            }
+          }
+        },
+        {
+          "title": "Adapter target",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "adapterId"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "adapter"
+              ],
+              "type": "string"
+            },
+            "adapterId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "\\S",
+              "description": "Registered active executor adapter ID. Apply verifies it implements this definition and step."
+            },
+            "mappingKey": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "description": "Stable Mapping resource key in this configuration bundle; resolved to a workspace ID during apply."
+            }
+          }
+        },
+        {
+          "title": "Observation-only target",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "observation-only"
+              ],
+              "type": "string",
+              "description": "ModernEDI observes and evaluates this step but does not initiate it."
+            }
+          }
+        }
+      ]
+    },
+    "ConfigurationScenarioBindingFactSourceBinding": {
+      "title": "Fact source binding",
+      "description": "Binds one named fact declaration to one validated X12 Mapper expression. Fact names must be unique within a step.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fact",
+        "source"
+      ],
+      "properties": {
+        "fact": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingToken",
+          "description": "Fact name declared by this exact ScenarioDefinition step."
+        },
+        "source": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingFactSource"
+        }
+      }
+    },
+    "ConfigurationScenarioBindingFactSource": {
+      "title": "Fact source",
+      "description": "One ordinary X12 Mapper expression fact source. It uses the same language and execution engine as an incoming map's primaryKeyExtractor; v1 does not define a second scenario-specific selector language. The expression must read the bound X12 document so its value has concrete provenance.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ConfigurationScenarioBindingX12MapperExpressionSource"
+        }
+      ]
+    },
+    "ConfigurationScenarioBindingX12MapperExpressionSource": {
+      "title": "X12 Mapper expression fact source",
+      "description": "Evaluates one ordinary X12 Mapper expression against the step transaction. Validate and Apply use the same parser, semantic validator, function registry, budget mechanism, and syntax-tree-aware engine as runtime mappings and primaryKeyExtractor, with scenario-specific bounded limits. Validate and Apply reject an expression that is statically incapable of reading an X12 segment or element, and runtime fails closed when the executed path produces no concrete X12 read. Scenario evidence uses that engine's element-read tracing facility; this does not imply that existing primary-key persistence emits the same trace. The ScenarioDefinition remains authoritative for value type, cardinality, normalization, and sensitivity.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "expression"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "x12-mapper-expression"
+          ],
+          "type": "string",
+          "description": "Uses ModernEDI's existing X12 Mapper expression language and engine, shared with primaryKeyExtractor."
+        },
+        "expression": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384,
+          "pattern": "\\S",
+          "example": "ST->BEG(03)",
+          "description": "One value-returning X12 Mapper expression that reads at least one X12 segment or element. A constant-only expression cannot provide authoritative document evidence. Scalars, lists, and sets are interpreted according to the matching fact declaration; secrets and credentials must never appear here."
+        }
+      }
+    },
+    "ConfigurationPlanAdvisoryStateFile": {
+      "description": "Optional untrusted snapshot copied from configuration export. It is accepted only with the canonical path, role, and JSON representation. ModernEDI compares its digest with current state to report `BASE_SNAPSHOT_STALE`, but never trusts its database ids, ETags, revision, or resource inventory as mutation authority.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "role",
+        "format",
+        "mediaType",
+        "contentSha256",
+        "content"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "enum": [
+            "_state/snapshot.json"
+          ]
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "STATE"
+          ]
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "JSON"
+          ]
+        },
+        "mediaType": {
+          "type": "string",
+          "enum": [
+            "application/json"
+          ]
+        },
+        "contentSha256": {
+          "$ref": "#/$defs/ConfigurationSha256"
+        },
+        "content": {
+          "$ref": "#/$defs/ConfigurationSnapshotState"
+        }
+      }
+    },
+    "ConfigurationSnapshotState": {
+      "description": "Observed server state stored at `_state/snapshot.json`. It relates portable resource keys to current workspace ids, API ETags, and exported resource hashes.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "runtimeConfigurationRevision",
+        "bundleSha256",
+        "resources"
+      ],
+      "properties": {
+        "apiVersion": {
+          "$ref": "#/$defs/ConfigurationDocumentApiVersion"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "IntegrationConfigurationSnapshot"
+          ]
+        },
+        "runtimeConfigurationRevision": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 0,
+          "description": "Monotonic workspace runtime-configuration revision observed by this export transaction."
+        },
+        "bundleSha256": {
+          "$ref": "#/$defs/ConfigurationSha256"
+        },
+        "resources": {
+          "type": "array",
+          "description": "Observed resource state sorted by kind and portable key.",
+          "items": {
+            "$ref": "#/$defs/ConfigurationSnapshotResource"
+          }
+        }
+      }
+    },
+    "ConfigurationSnapshotResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "key",
+        "resourceId",
+        "contentSha256",
+        "apiEtag"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ConfigurationResourceKind"
+        },
+        "key": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Stable portable identity from the corresponding resource document."
+        },
+        "resourceId": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Current workspace-scoped database id used by the existing per-resource Integration API endpoints."
+        },
+        "contentSha256": {
+          "$ref": "#/$defs/ConfigurationSha256"
+        },
+        "apiEtag": {
+          "type": "string",
+          "pattern": "^\"[0-9a-f]{64}\"$",
+          "description": "Current quoted ETag from the corresponding partner, AS2 connection, or mapping API representation."
+        }
+      }
+    }
+  }
+}

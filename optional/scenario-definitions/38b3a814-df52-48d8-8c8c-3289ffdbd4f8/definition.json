@@ -1,0 +1,205 @@
+{
+  "apiVersion": "modernedi.com/v1",
+  "kind": "ScenarioDefinition",
+  "metadata": {
+    "key": "38b3a814-df52-48d8-8c8c-3289ffdbd4f8"
+  },
+  "spec": {
+    "source": {
+      "$schema": "https://www.modernedi.com/docs/scenarios/schemas/scenario-definition-v1.schema.json",
+      "apiVersion": "modernedi.com/scenario/v1",
+      "kind": "ScenarioDefinition",
+      "metadata": {
+        "namespace": "example",
+        "key": "order-to-invoice",
+        "version": "1.0.0"
+      },
+      "spec": {
+        "actors": [
+          {
+            "id": "retailer"
+          },
+          {
+            "id": "supplier"
+          }
+        ],
+        "steps": [
+          {
+            "id": "purchaseOrder",
+            "fromActor": "retailer",
+            "toActor": "supplier",
+            "transaction": {
+              "standard": "X12",
+              "transactionSet": "850",
+              "businessUsage": "purchase_order"
+            },
+            "occurrence": {
+              "min": 1,
+              "max": 1,
+              "closure": {
+                "kind": "fixed"
+              }
+            },
+            "assurance": {
+              "requirements": [
+                {
+                  "type": "mapping_succeeded"
+                }
+              ]
+            },
+            "facts": [
+              {
+                "name": "purchaseOrderNumber",
+                "type": "string",
+                "cardinality": "one",
+                "normalization": [
+                  "trim"
+                ],
+                "sensitivity": "business"
+              }
+            ],
+            "pipeline": [
+              {
+                "id": "exchange",
+                "kind": "exchange"
+              },
+              {
+                "id": "extract",
+                "kind": "extract",
+                "facts": [
+                  "purchaseOrderNumber"
+                ]
+              },
+              {
+                "id": "assure",
+                "kind": "assure"
+              }
+            ]
+          },
+          {
+            "id": "invoice",
+            "fromActor": "supplier",
+            "toActor": "retailer",
+            "transaction": {
+              "standard": "X12",
+              "transactionSet": "810",
+              "businessUsage": "invoice"
+            },
+            "occurrence": {
+              "min": 1,
+              "max": 1,
+              "closure": {
+                "kind": "fixed"
+              }
+            },
+            "assurance": {
+              "requirements": [
+                {
+                  "type": "transport_receipt_accepted",
+                  "within": "PT4H"
+                },
+                {
+                  "type": "functional_or_implementation_acknowledgment_accepted"
+                }
+              ]
+            },
+            "facts": [
+              {
+                "name": "purchaseOrderNumber",
+                "type": "string",
+                "cardinality": "one",
+                "normalization": [
+                  "trim"
+                ],
+                "sensitivity": "business"
+              },
+              {
+                "name": "invoiceTotal",
+                "type": "decimal",
+                "cardinality": "optional",
+                "normalization": [
+                  "decimal_canonical"
+                ],
+                "sensitivity": "financial"
+              }
+            ],
+            "pipeline": [
+              {
+                "id": "exchange",
+                "kind": "exchange"
+              },
+              {
+                "id": "extract",
+                "kind": "extract",
+                "facts": [
+                  "purchaseOrderNumber",
+                  "invoiceTotal"
+                ]
+              },
+              {
+                "id": "assure",
+                "kind": "assure"
+              }
+            ]
+          }
+        ],
+        "transitions": [
+          {
+            "id": "invoiceSettlesOrder",
+            "fromStep": "purchaseOrder",
+            "toStep": "invoice",
+            "relationship": "follows",
+            "within": "P30D",
+            "correlations": [
+              {
+                "id": "samePurchaseOrder",
+                "operator": "equal",
+                "left": {
+                  "kind": "fact",
+                  "stepId": "purchaseOrder",
+                  "fact": "purchaseOrderNumber",
+                  "projection": "value"
+                },
+                "right": {
+                  "kind": "fact",
+                  "stepId": "invoice",
+                  "fact": "purchaseOrderNumber",
+                  "projection": "value"
+                }
+              }
+            ],
+            "matching": {
+              "strategy": "correlate",
+              "quantifiers": [
+                {
+                  "kind": "every",
+                  "scope": "from"
+                },
+                {
+                  "kind": "every",
+                  "scope": "to"
+                }
+              ],
+              "unmatched": "fail"
+            }
+          }
+        ],
+        "assertions": [
+          {
+            "id": "invoiceTotalExists",
+            "operator": "exists",
+            "left": {
+              "kind": "fact",
+              "stepId": "invoice",
+              "fact": "invoiceTotal",
+              "projection": "value"
+            }
+          }
+        ],
+        "parameters": [],
+        "checkpoints": [],
+        "branches": []
+      }
+    }
+  }
+}

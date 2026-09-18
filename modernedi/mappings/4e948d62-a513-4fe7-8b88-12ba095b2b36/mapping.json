@@ -1,0 +1,39 @@
+{
+  "apiVersion": "modernedi.com/v1",
+  "kind": "Mapping",
+  "metadata": {
+    "key": "4e948d62-a513-4fe7-8b88-12ba095b2b36"
+  },
+  "spec": {
+    "runtime": { "extraFields": {} },
+    "partnerKey": "61c5a052-9f83-49e9-a858-e7ddbc56a514",
+    "direction": "OUTGOING",
+    "x12Version": "4010",
+    "functionalIdentifierCode": "IN",
+    "transactionSetIdentifierCode": "810",
+    "transform": {
+      "type": "JSLT",
+      "fileName": "invoice.jslt",
+      "sourcePath": "mappings/4e948d62-a513-4fe7-8b88-12ba095b2b36/source.jslt"
+    },
+    "output": {
+      "contentType": "application/edi-x12",
+      "purpose": "PROCESSING",
+      "delivery": "OUTBOUND_AS2"
+    },
+    "regressionCases": [
+      {
+        "id": "invoice-identifiers",
+        "name": "Include the invoice and original purchase-order number",
+        "comparison": "EXACT_TEXT",
+        "input": "{\"invoiceDate\":\"20260918\",\"invoiceNumber\":\"INV0001\",\"purchaseOrderNumber\":\"PO0001\",\"totalCents\":10000}",
+        "contentType": "application/json",
+        "params": null,
+        "functionalGroupIndex": null,
+        "transactionIndex": null,
+        "expectedOutput": "BIG*20260918*INV0001**PO0001~\nTDS*10000~",
+        "validateX12": true
+      }
+    ]
+  }
+}

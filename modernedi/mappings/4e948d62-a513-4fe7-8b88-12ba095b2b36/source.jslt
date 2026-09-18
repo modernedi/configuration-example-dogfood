@@ -1,0 +1,4 @@
+[
+  "BIG*" + .input.invoiceDate + "*" + .input.invoiceNumber + "**" + .input.purchaseOrderNumber + "~",
+  "TDS*" + string(.input.totalCents) + "~"
+]

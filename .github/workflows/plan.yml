@@ -1,0 +1,56 @@
+name: Review workspace plan
+
+# Only a private, explicitly enabled copy may access workspace configuration.
+# Run trusted base-branch tools; proposed PR files are DATA, never executable CI.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: modernedi-plan-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    if: >-
+      github.event.repository.private == true &&
+      vars.MODERNEDI_LIVE_CI == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: modernedi-plan
+    steps:
+      - name: Check out trusted tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --registry https://registry.npmjs.org/
+      - name: Check out proposed configuration as data only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: candidate
+          persist-credentials: false
+          sparse-checkout: modernedi
+      - name: Plan without applying or sending EDI
+        env:
+          MODERNEDI_API_KEY: ${{ secrets.MODERNEDI_API_KEY }}
+          MODERNEDI_VERIFY_CASES: ${{ vars.MODERNEDI_VERIFY_CASES }}
+          MODERNEDI_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/ci.mjs plan candidate/modernedi artifacts
+      - name: Keep private review evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pr-plan-${{ github.event.pull_request.head.sha }}-${{ github.run_attempt }}
+          path: artifacts/
+          retention-days: 7
