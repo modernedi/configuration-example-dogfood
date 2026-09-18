@@ -1,15 +1,17 @@
 {
   "formatVersion": 1,
-  "repository": "modernedi/configuration-example",
+  "repository": "modernedi/configuration-example-dogfood",
   "package": "modernedi-configuration-example",
   "version": "0.1.0",
-  "sourceRevision": "57c4a585fd65deda07afa47177af49b0bfc978a6",
+  "sourceRevision": "cd591dd16a25092fb77a42029ff9315e5c5c0c84",
   "files": {
     ".gitattributes": "d60f352d0db1404c70afb4bb8b2ca3fd1c610572aa40720e8a0b7baa7885418c",
     ".github/workflows/ci.yml": "0b5e961c59c160766744b3054cea9953918151253ce9f476b2b023bee6b37696",
     ".github/workflows/deploy.yml": "1ece545765406ddd502d4e57224f390c2a2613ed0a1506742449235a33f93305",
+    ".github/workflows/dogfood.yml": "99ffa082358d5bdb1d89533aa49d11279e28776f869f355eeac32aa80172d934",
     ".github/workflows/plan.yml": "6ec19571a3ac1482a6056f22a75c3deee3bfaa9a45b361397e9fce2630fb352f",
     ".gitignore": "0c78cda7cc39c7a5123a8ac1418b47e2e7ad3fc81f9c92911fad62b9b952aedc",
+    "DOGFOOD.json": "8e5a6520477c600fb7922993c0735b5fba6be58125cd46bbfe839ec6687c2206",
     "LICENSE": "5094a2bea463604e98f133a5ab9dcda14202a7652c803825993922a44bb9cf9c",
     "modernedi/as2-connections/9d7e1e0c-1e98-4b44-a579-bf08d2642979/certificates/shared.pem": "05676f7de92c02a5674e4ac40d695aeea7f576481bb97cd378d7dc30509b2c4d",
     "modernedi/as2-connections/9d7e1e0c-1e98-4b44-a579-bf08d2642979/connection.json": "cc9f873a2bd1df89dc6ba40f861ada5e0f3821de86095b4ec2913ef87cb5ce53",
@@ -25,11 +27,13 @@
     "optional/scenario-definitions/38b3a814-df52-48d8-8c8c-3289ffdbd4f8/definition.json": "cee43ba6bebe67ebeb61d2267e70d4461686e79de1589379dc3753cae3dc2690",
     "package-lock.json": "20f6640a51cc4687c16fe4f3882acc5066ac9df737fab7fb80d567c6e7fa22f8",
     "package.json": "2bd5c03835852dbc68b2978a258b2757224b9944dcc02e9cb7ba00b5b0a77ba4",
-    "README.md": "1bc9df01da55288240ab48747a602b4cdf0ec493d716ee7e1daf0cbccf820ec0",
+    "README.md": "6b346754dfe8b7bb86fcf495d6dc4e8d6801cb87442e2aadf20ae7670eca06d3",
     "schemas/configuration-plan-request.schema.json": "fa00f781b1d1eb90b499b6a1d09847aacef876d212cb4372f50b61d002334262",
+    "scripts/assert-dogfood-target.mjs": "a15a187cffdada0b776937a528e5467443dd2e99bf4ac03b13efc2fdbc877f34",
     "scripts/check.mjs": "d89b7e58508fd5021a4bf19e7af9f9668d507be2c4fb5cecac8c3bae67755b77",
     "scripts/ci.mjs": "8297afefd6bbc22fd9616808ade4bfc0d3eb53fbbfd40ccdf7d1df3d59427dc8",
     "scripts/verify-public-source.mjs": "229505234d3046dfae5062daab649586e5a5c5055d1cecbc2ad3cfe90f6f04d0",
     "test/example.test.mjs": "79d2194754d1ecaac15ec440728819a3d3cd626f36fa4466d91c06fadd6d52cc"
-  }
+  },
+  "templateRepository": "modernedi/configuration-example"
 }

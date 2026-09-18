@@ -4,7 +4,7 @@ This is a controlled, disposable test of the [public configuration example](http
 
 The dedicated workspace contains only the synthetic example. No EDI is sent. The additional, manually dispatched `dogfood.yml` workflow reuses the example's plan, saved-case verification, approval, and exact reviewed-apply jobs. Each job checks the pinned workspace identity, exact key scopes, and absence of automatic Git imports. Apply requires environment approval on protected main. The original private-copy workflows remain disabled here.
 
-Provisioning and safety settings are maintained in ModernEDI's private provision-cdk module. `PUBLIC_SOURCE.json` describes the original template files before this documented overlay; `DOGFOOD.json` identifies the fixture and overlay source revision.
+Provisioning and safety settings are maintained in ModernEDI's private provision-cdk module. `PUBLIC_SOURCE.json` describes this exact derived export and names its template repository; `DOGFOOD.json` identifies the fixture and source revision.
 
 ---
 
