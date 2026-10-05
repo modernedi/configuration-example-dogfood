@@ -1,6 +1,0 @@
-[
-  "BAK*00*AC*" + .input.purchaseOrderNumber + "*" + .input.orderDate + "~"
-] + [for (.input.lines)
-  "PO1*" + string(.lineNumber) + "*" + string(.quantity) + "*" + .unit + "*" + string(.unitPrice) + "**VN*" + .sku + "~\n" +
-  "ACK*" + .acknowledgmentCode + "*" + string(.quantity) + "*" + .unit + "~"
-] + ["CTT*" + string(size(.input.lines)) + "~"]

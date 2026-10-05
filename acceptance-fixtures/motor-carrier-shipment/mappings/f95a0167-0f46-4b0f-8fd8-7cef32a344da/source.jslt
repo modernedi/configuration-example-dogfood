@@ -1,3 +1,0 @@
-[
-  "B1*" + .input.carrier + "*" + .input.loadId + "*" + .input.date + "*" + .input.action + "~"
-]

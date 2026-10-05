@@ -1,9 +1,0 @@
-[
-  "B3**" + .input.invoiceNumber + "*" + .input.loadId + "*PP*L*" + .input.invoiceDate + "*" + string(.input.totalCents) + "**" + .input.deliveryDate + "*035*" + .input.carrier + "~",
-  "C3*" + .input.currency + "~",
-  "LX*1~",
-  "L5*1*LINEHAUL~",
-  "L0*1***1000*G***10*CTN~",
-  "L1*1*" + string(.input.totalCents / 100) + "*FR*" + string(.input.totalCents) + "~",
-  "L3*1000*G***" + string(.input.totalCents) + "~"
-]

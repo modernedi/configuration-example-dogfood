@@ -1,6 +1,0 @@
-[
-  "B10*" + .input.proNumber + "*" + .input.loadId + "*" + .input.carrier + "~",
-  "LX*1~",
-  "AT7*" + .input.status + "*NS***" + .input.date + "*" + .input.time + "*UT~",
-  "MS1*" + .input.city + "*AZ*US~"
-]
