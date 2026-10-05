@@ -1612,7 +1612,7 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 1000,
-          "description": "Minimum accepted count once a reachable step closes. Zero is a no-document outcome only when expected_count resolves to 0 or branch selection makes the step unreachable; zero alone does not close a stream."
+          "description": "Minimum accepted count once a reachable step closes. Zero permits a no-document outcome when expected_count resolves to 0, explicit closure records no documents, or branch selection makes the step unreachable; zero alone does not close a stream."
         },
         "max": {
           "type": "integer",
@@ -1622,13 +1622,13 @@
         },
         "closure": {
           "$ref": "#/$defs/ConfigurationScenarioDefinitionOccurrenceClosure",
-          "description": "The closure rule: the objective signal that no more documents are expected for this step. It may be omitted while authoring; Publish writes fixed when min equals max and max_reached otherwise. Because max_reached waits for the maximum, a min-zero unbranched step must instead use expected_count so a zero-document outcome is explicit."
+          "description": "The closure rule: the signal that no more documents are expected for this step. It may be omitted while authoring; Publish writes fixed when min equals max and max_reached otherwise. Because max_reached waits for the maximum, a min-zero unbranched step must instead use expected_count or explicit so a zero-document outcome is deliberate."
         }
       }
     },
     "ConfigurationScenarioDefinitionOccurrenceClosure": {
       "title": "Occurrence closure",
-      "description": "The objective rule that tells a run no more documents are expected for one repeated step. fixed closes at the required fixed count; max_reached closes only at the authored maximum; expected_count closes at a required or defaulted run parameter, including an explicit zero. Branch selection supplies the no-document outcome for an unselected destination. There is no manual-close operation in v1.",
+      "description": "The rule that tells a run no more documents will be attached to a step. fixed closes at the fixed count; max_reached closes at the maximum; expected_count uses a required or defaulted count parameter. explicit waits for an authorized browser or API decision, even at max: advance with closeSteps records the exact attached count and time, then evaluates all existing checks. Closing does not assert success, reopen the step, or send EDI. An explicit min-zero step can close with no documents. Existing attachments may still refresh pending evidence while the run is active. A new run is required for additional documents after closure. Branch selection supplies the no-document outcome for an unselected destination.",
       "oneOf": [
         {
           "title": "Fixed closure",
@@ -1661,6 +1661,23 @@
               ],
               "type": "string",
               "description": "Close only when the declared maximum count is observed. Example: a 315 status step with max=2 closes after the second status document."
+            }
+          }
+        },
+        {
+          "title": "Explicit closure",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "explicit"
+              ],
+              "type": "string",
+              "description": "Wait for an explicit no-more-documents decision through the browser or advance API closeSteps field. The maximum is a safety limit, not an expected final count. Quantity equality alone never closes the step."
             }
           }
         },
@@ -2477,7 +2494,7 @@
     },
     "ConfigurationScenarioDefinitionAssertion": {
       "title": "Assertion",
-      "description": "A fact rule that must hold for the run to pass. For example, exists can require every 810 invoice to expose invoiceTotal, sum_equal can compare shipped and invoiced totals, and monotonic can require successive 315 status timestamps to move forward. Binary operators require right; unary operators reject it.",
+      "description": "A fact rule that must hold for the run to pass. sum_equal compares overall totals. keyed_sum_equal instead sums decimal amounts per item key across occurrences, then requires identical keys and per-key totals on both sides. keyed_equal requires identical keys and consistent decimal values per key, including across repeated occurrences (useful for unit prices). Keyed comparisons wait for both steps to close before passing and require keyed_facts operands. Binary operators require right; unary operators reject it.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -2499,16 +2516,66 @@
             "same_set",
             "subset",
             "sum_equal",
+            "keyed_sum_equal",
+            "keyed_equal",
             "less_than_or_equal",
             "greater_than_or_equal",
             "monotonic"
           ]
         },
         "left": {
-          "$ref": "#/$defs/ConfigurationScenarioDefinitionValueOperand"
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionAssertionOperand"
         },
         "right": {
-          "$ref": "#/$defs/ConfigurationScenarioDefinitionValueOperand"
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionAssertionOperand"
+        }
+      }
+    },
+    "ConfigurationScenarioDefinitionAssertionOperand": {
+      "title": "Assertion operand",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionFactOperand"
+        },
+        {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionParameterOperand"
+        },
+        {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionLiteralOperand"
+        },
+        {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionKeyedFactOperand"
+        }
+      ]
+    },
+    "ConfigurationScenarioDefinitionKeyedFactOperand": {
+      "title": "Keyed fact operand",
+      "description": "Conversation assertion input: align the required string-list keyFact and required decimal-list fact by index within each effective occurrence of stepId. List lengths must agree. Keys must be nonblank and unique within each occurrence; the same key may recur in later documents. Both the keys and values retain source evidence. No projection or parameter is accepted. This does not combine quantities in different units: include unit in your Mapper-produced key. Keyed operators are not available in branch predicates, correlations, or revision timestamps.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "stepId",
+        "keyFact",
+        "fact"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "keyed_facts"
+          ],
+          "type": "string"
+        },
+        "stepId": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken"
+        },
+        "keyFact": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken",
+          "description": "Required list of string keys on this step."
+        },
+        "fact": {
+          "$ref": "#/$defs/ConfigurationScenarioDefinitionToken",
+          "description": "Required list of decimal values aligned with keyFact on this step."
         }
       }
     },
@@ -2559,7 +2626,7 @@
     },
     "ConfigurationScenarioDefinitionBranch": {
       "title": "Explicit branch",
-      "description": "A choice between mutually exclusive next-document paths after a named checkpoint. The checkpoint must be emitted by the alternatives' shared source step, so the decision precedes every controlled destination. The emitter must also necessarily observe at least one document; expected_count closure with occurrence min 0 cannot emit a branch checkpoint. All alternatives leave the same source step. Example: after a 301 booking confirmation emits bookingDisposition, choose the 303 cancellation path when cancelRequested=true; otherwise choose 304 shipping instructions. exactly_one must choose one path and therefore requires an otherwise fallback. at_most_one may choose no path. A round evaluates only evidence already available when that round began; its selection can make later steps available in the next round.",
+      "description": "A choice between mutually exclusive next-document paths after a named checkpoint. The checkpoint must be emitted by the alternatives' shared source step, so the decision precedes every controlled destination. The emitter must also necessarily observe at least one document; expected_count or explicit closure with occurrence min 0 cannot emit a branch checkpoint. All alternatives leave the same source step. Example: after a 301 booking confirmation emits bookingDisposition, choose the 303 cancellation path when cancelRequested=true; otherwise choose 304 shipping instructions. exactly_one must choose one path and therefore requires an otherwise fallback. at_most_one may choose no path. A round evaluates only evidence already available when that round began; its selection can make later steps available in the next round.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -2801,6 +2868,9 @@
         "steps"
       ],
       "properties": {
+        "regressionCases": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingRegressionCases"
+        },
         "definition": {
           "$ref": "#/$defs/ConfigurationScenarioBindingDefinitionReference"
         },
@@ -2831,6 +2901,156 @@
           }
         }
       }
+    },
+    "ConfigurationScenarioBindingRegressionCases": {
+      "title": "Saved conversation tests",
+      "description": "Optional offline tests for this binding. Each observation references a saved case on the step's bound runtime mapping. Tests execute proposed maps and the existing graph interpreter without sending EDI or creating live run evidence. Case order is canonicalized by ID; observation order is preserved. Up to 10 cases, 20 observations each, and 64 KiB total.",
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "$ref": "#/$defs/ConfigurationScenarioBindingRegressionCase"
+      }
+    },
+    "ConfigurationScenarioBindingRegressionCase": {
+      "title": "Saved conversation case",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "parameters",
+        "observations",
+        "evaluatedAfterSeconds",
+        "closeSteps",
+        "expected"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "\\S"
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true,
+          "maxProperties": 100,
+          "description": "Ordinary run parameters, resolved and type-checked against this exact definition."
+        },
+        "observations": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioBindingRegressionObservation"
+          },
+          "description": "Listed attachment order. Repeated step IDs are assigned occurrence 1, 2, and so on. No sorting by business event time occurs."
+        },
+        "evaluatedAfterSeconds": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingTestSeconds",
+          "description": "Evaluation time relative to a fixed synthetic UTC start. Must not precede any observation."
+        },
+        "closeSteps": {
+          "type": "array",
+          "maxItems": 100,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/ConfigurationScenarioBindingToken"
+          },
+          "description": "Explicit-completion steps to close at the evaluation time. Closing never waives their checks."
+        },
+        "expected": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingRegressionExpected"
+        }
+      }
+    },
+    "ConfigurationScenarioBindingRegressionObservation": {
+      "title": "Saved mapping-case observation",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stepId",
+        "mappingCaseId",
+        "observedAfterSeconds"
+      ],
+      "properties": {
+        "stepId": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingToken"
+        },
+        "mappingCaseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "\\S",
+          "description": "ID of a saved case belonging to this step's bound runtime mapping. Incoming observations use that case's selected X12 transaction; outgoing observations use the actual generated output, never expectedOutput."
+        },
+        "observedAfterSeconds": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingTestSeconds"
+        }
+      }
+    },
+    "ConfigurationScenarioBindingTestSeconds": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 31536000,
+      "description": "Whole seconds after the synthetic start (at most 365 days)."
+    },
+    "ConfigurationScenarioBindingRegressionExpected": {
+      "title": "Expected conversation result",
+      "description": "A FAILED expectation must include at least one specific FAILED check, preventing an unrelated failure from satisfying a negative test.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "checks"
+      ],
+      "properties": {
+        "outcome": {
+          "$ref": "#/$defs/ConfigurationScenarioBindingRegressionOutcome"
+        },
+        "checks": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "outcome",
+              "code"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024,
+                "pattern": "\\S"
+              },
+              "outcome": {
+                "$ref": "#/$defs/ConfigurationScenarioBindingRegressionOutcome"
+              },
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "\\S"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ConfigurationScenarioBindingRegressionOutcome": {
+      "type": "string",
+      "enum": [
+        "PASSED",
+        "FAILED",
+        "PENDING",
+        "INCONCLUSIVE"
+      ]
     },
     "ConfigurationScenarioBindingDefinitionReference": {
       "title": "Published definition reference",

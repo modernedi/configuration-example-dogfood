@@ -91,7 +91,7 @@ test('CI refuses failed evidence, missing identity/key, or failed runner executi
   // Exercise the REAL published CLI entrypoint without any network or credentials.
   const result = spawnSync(process.execPath, ['node_modules/@modernedi/configuration-runner/dist/main.js', 'invalid-command'], { cwd: root, encoding: 'utf8' });
   assert.equal(result.status, 64, result.stderr);
-  assert.equal(JSON.parse(read('node_modules/@modernedi/configuration-runner/package.json')).version, '0.5.1');
+  assert.equal(JSON.parse(read('node_modules/@modernedi/configuration-runner/package.json')).version, '0.6.0');
 });
 
 test('verification IDs are valid and stable across retries of one source/run', () => {

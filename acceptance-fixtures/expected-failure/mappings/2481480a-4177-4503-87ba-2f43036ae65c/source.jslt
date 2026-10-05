@@ -1,0 +1,10 @@
+[
+  "BSN*00*" + .input.shipmentId + "*" + .input.shipmentDate + "*" + .input.shipmentTime + "~",
+  "HL*1**S~",
+  "HL*2*1*O~",
+  "PRF*" + .input.purchaseOrderNumber + "~"
+] + [for (.input.lines)
+  "HL*" + string(.lineNumber + 2) + "*2*I~\n" +
+  "LIN**VN*" + .sku + "~\n" +
+  "SN1**" + string(.quantity) + "*" + .unit + "~"
+] + ["CTT*" + string(size(.input.lines) + 2) + "~"]

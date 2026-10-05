@@ -1,0 +1,374 @@
+{
+  "apiVersion": "modernedi.com/v1",
+  "kind": "ScenarioBinding",
+  "metadata": {
+    "key": "1b9de4e6-86a5-48a3-8ef9-fece998ea517"
+  },
+  "spec": {
+    "source": {
+      "$schema": "https://www.modernedi.com/docs/scenarios/schemas/scenario-binding-v1.schema.json",
+      "apiVersion": "modernedi.com/scenario-binding-authoring/v1",
+      "kind": "ScenarioBinding",
+      "metadata": {
+        "id": "supplierOrderFulfillment",
+        "name": "Supplier order, optional acknowledgment, shipment and invoice"
+      },
+      "spec": {
+        "regressionCases": [
+          {
+            "id": "full-order-with-855",
+            "name": "full order with 855",
+            "parameters": {
+              "acknowledgmentCount": 1
+            },
+            "observations": [
+              {
+                "stepId": "purchaseOrder",
+                "mappingCaseId": "purchase-order-example",
+                "observedAfterSeconds": 0
+              },
+              {
+                "stepId": "purchaseOrderAcknowledgment",
+                "mappingCaseId": "acknowledgment-example",
+                "observedAfterSeconds": 60
+              },
+              {
+                "stepId": "advanceShipNotice",
+                "mappingCaseId": "shipment-example",
+                "observedAfterSeconds": 86400
+              },
+              {
+                "stepId": "invoice",
+                "mappingCaseId": "invoice-example",
+                "observedAfterSeconds": 90000
+              }
+            ],
+            "evaluatedAfterSeconds": 90060,
+            "closeSteps": [],
+            "expected": {
+              "outcome": "PASSED",
+              "checks": []
+            }
+          },
+          {
+            "id": "full-order-without-855",
+            "name": "full order without 855",
+            "parameters": {
+              "acknowledgmentCount": 0
+            },
+            "observations": [
+              {
+                "stepId": "purchaseOrder",
+                "mappingCaseId": "purchase-order-example",
+                "observedAfterSeconds": 0
+              },
+              {
+                "stepId": "advanceShipNotice",
+                "mappingCaseId": "shipment-example",
+                "observedAfterSeconds": 86400
+              },
+              {
+                "stepId": "invoice",
+                "mappingCaseId": "invoice-example",
+                "observedAfterSeconds": 90000
+              }
+            ],
+            "evaluatedAfterSeconds": 90060,
+            "closeSteps": [],
+            "expected": {
+              "outcome": "PASSED",
+              "checks": []
+            }
+          },
+          {
+            "id": "expected-855-is-still-missing",
+            "name": "expected 855 is still missing",
+            "parameters": {
+              "acknowledgmentCount": 1
+            },
+            "observations": [
+              {
+                "stepId": "purchaseOrder",
+                "mappingCaseId": "purchase-order-example",
+                "observedAfterSeconds": 0
+              },
+              {
+                "stepId": "advanceShipNotice",
+                "mappingCaseId": "shipment-example",
+                "observedAfterSeconds": 86400
+              },
+              {
+                "stepId": "invoice",
+                "mappingCaseId": "invoice-example",
+                "observedAfterSeconds": 90000
+              }
+            ],
+            "evaluatedAfterSeconds": 90060,
+            "closeSteps": [],
+            "expected": {
+              "outcome": "PENDING",
+              "checks": []
+            }
+          },
+          {
+            "id": "expected-855-is-overdue",
+            "name": "expected 855 is overdue",
+            "parameters": {
+              "acknowledgmentCount": 1
+            },
+            "observations": [
+              {
+                "stepId": "purchaseOrder",
+                "mappingCaseId": "purchase-order-example",
+                "observedAfterSeconds": 0
+              },
+              {
+                "stepId": "advanceShipNotice",
+                "mappingCaseId": "shipment-example",
+                "observedAfterSeconds": 86400
+              },
+              {
+                "stepId": "invoice",
+                "mappingCaseId": "invoice-example",
+                "observedAfterSeconds": 90000
+              }
+            ],
+            "evaluatedAfterSeconds": 259200,
+            "closeSteps": [],
+            "expected": {
+              "outcome": "FAILED",
+              "checks": [
+                {
+                  "id": "transition:acknowledgmentForOrder",
+                  "outcome": "FAILED",
+                  "code": "TRANSITION_WINDOW_EXPIRED"
+                }
+              ]
+            }
+          }
+        ],
+        "definition": {
+          "namespace": "example",
+          "key": "supplier-order-fulfillment",
+          "version": "1.0.0",
+          "contentSha256": "4eca3a5bc60b2b1ab8dc1659d59fbe39d4b08311972d42a3980025e279cd5663"
+        },
+        "environment": "test",
+        "actors": [
+          {
+            "actorId": "retailer",
+            "endpoint": {
+              "kind": "partner",
+              "partnerKey": "61c5a052-9f83-49e9-a858-e7ddbc56a514"
+            }
+          },
+          {
+            "actorId": "supplier",
+            "endpoint": {
+              "kind": "workspace"
+            }
+          }
+        ],
+        "steps": [
+          {
+            "stepId": "purchaseOrder",
+            "target": {
+              "kind": "runtime-mapping",
+              "mappingKey": "8ccf76f0-2701-4d4c-a5c4-94a453feec81"
+            },
+            "factSources": [
+              {
+                "fact": "purchaseOrderNumber",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "ST->BEG(03)"
+                }
+              },
+              {
+                "fact": "lineKeys",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "forEach(line in orderBy(line in ST->PO1 => toJson([trim(line(07)[0]), trim(line(03)[0])])) => toJson([trim(line(07)[0]), trim(line(03)[0])]))"
+                }
+              },
+              {
+                "fact": "quantities",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "forEach(line in orderBy(line in ST->PO1 => toJson([trim(line(07)[0]), trim(line(03)[0])])) => line(02))"
+                }
+              },
+              {
+                "fact": "linesValid",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "countOf(line in ST->PO1) > 0 && allOf(line in ST->PO1 : line(06) == \"VN\" && !isEmpty(trim(line(07)[0])) && !isEmpty(trim(line(03)[0])) && toNumber(line(02)) > 0 && toNumber(line(04)) >= 0)"
+                }
+              },
+              {
+                "fact": "unitPrices",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "forEach(line in orderBy(line in ST->PO1 => toJson([trim(line(07)[0]), trim(line(03)[0])])) => line(04))"
+                }
+              },
+              {
+                "fact": "orderTotal",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "sumOf(line in ST->PO1 => round(toNumber(line(02)) * toNumber(line(04)), 2))"
+                }
+              },
+              {
+                "fact": "currency",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "ST->CUR(02)"
+                }
+              }
+            ]
+          },
+          {
+            "stepId": "purchaseOrderAcknowledgment",
+            "target": {
+              "kind": "runtime-mapping",
+              "mappingKey": "598cf5b2-0a0e-4277-8565-98f43dc8a006"
+            },
+            "factSources": [
+              {
+                "fact": "purchaseOrderNumber",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "ST->BAK(03)"
+                }
+              },
+              {
+                "fact": "acknowledgmentCode",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "ST->BAK(02)"
+                }
+              }
+            ]
+          },
+          {
+            "stepId": "advanceShipNotice",
+            "target": {
+              "kind": "runtime-mapping",
+              "mappingKey": "2481480a-4177-4503-87ba-2f43036ae65c"
+            },
+            "factSources": [
+              {
+                "fact": "purchaseOrderNumber",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "ST->HL[03 == \"O\"]->PRF(01)"
+                }
+              },
+              {
+                "fact": "shipmentId",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "ST->BSN(02)"
+                }
+              },
+              {
+                "fact": "lineKeys",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "forEach(line in orderBy(line in ST->HL[03 == \"I\"] => toJson([trim(line->LIN(03)[0]), trim(line->SN1(03)[0])])) => toJson([trim(line->LIN(03)[0]), trim(line->SN1(03)[0])]))"
+                }
+              },
+              {
+                "fact": "quantities",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "forEach(line in orderBy(line in ST->HL[03 == \"I\"] => toJson([trim(line->LIN(03)[0]), trim(line->SN1(03)[0])])) => line->SN1(02))"
+                }
+              },
+              {
+                "fact": "linesValid",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "countOf(line in ST->HL[03 == \"O\"]) == 1 && countOf(line in ST->HL[03 == \"I\"]) > 0 && allOf(line in ST->HL[03 == \"I\"] : line->LIN(02) == \"VN\" && !isEmpty(trim(line->LIN(03)[0])) && !isEmpty(trim(line->SN1(03)[0])) && toNumber(line->SN1(02)) > 0)"
+                }
+              }
+            ]
+          },
+          {
+            "stepId": "invoice",
+            "target": {
+              "kind": "runtime-mapping",
+              "mappingKey": "4e948d62-a513-4fe7-8b88-12ba095b2b36"
+            },
+            "factSources": [
+              {
+                "fact": "purchaseOrderNumber",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "ST->BIG(04)"
+                }
+              },
+              {
+                "fact": "shipmentId",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "ST->REF[01 == \"SI\"](02)"
+                }
+              },
+              {
+                "fact": "lineKeys",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "forEach(line in orderBy(line in ST->IT1 => toJson([trim(line(07)[0]), trim(line(03)[0])])) => toJson([trim(line(07)[0]), trim(line(03)[0])]))"
+                }
+              },
+              {
+                "fact": "quantities",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "forEach(line in orderBy(line in ST->IT1 => toJson([trim(line(07)[0]), trim(line(03)[0])])) => line(02))"
+                }
+              },
+              {
+                "fact": "linesValid",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "countOf(line in ST->IT1) > 0 && allOf(line in ST->IT1 : line(06) == \"VN\" && !isEmpty(trim(line(07)[0])) && !isEmpty(trim(line(03)[0])) && toNumber(line(02)) > 0 && toNumber(line(04)) >= 0)"
+                }
+              },
+              {
+                "fact": "unitPrices",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "forEach(line in orderBy(line in ST->IT1 => toJson([trim(line(07)[0]), trim(line(03)[0])])) => line(04))"
+                }
+              },
+              {
+                "fact": "lineTotal",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "sumOf(line in ST->IT1 => round(toNumber(line(02)) * toNumber(line(04)), 2))"
+                }
+              },
+              {
+                "fact": "invoiceTotal",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "toNumber(ST->TDS(01)) / 100"
+                }
+              },
+              {
+                "fact": "currency",
+                "source": {
+                  "kind": "x12-mapper-expression",
+                  "expression": "ST->CUR(02)"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

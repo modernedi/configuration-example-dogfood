@@ -1,0 +1,53 @@
+{
+  "apiVersion": "modernedi.com/v1",
+  "kind": "Mapping",
+  "metadata": {
+    "key": "4e948d62-a513-4fe7-8b88-12ba095b2b36"
+  },
+  "spec": {
+    "runtime": {
+      "extraFields": {}
+    },
+    "partnerKey": "61c5a052-9f83-49e9-a858-e7ddbc56a514",
+    "direction": "OUTGOING",
+    "x12Version": "4010",
+    "functionalIdentifierCode": "IN",
+    "transactionSetIdentifierCode": "810",
+    "transform": {
+      "type": "JSLT",
+      "fileName": "invoice.jslt",
+      "sourcePath": "mappings/4e948d62-a513-4fe7-8b88-12ba095b2b36/source.jslt"
+    },
+    "output": {
+      "contentType": "application/edi-x12",
+      "purpose": "PROCESSING",
+      "delivery": "OUTBOUND_AS2"
+    },
+    "regressionCases": [
+      {
+        "id": "invoice-first",
+        "name": "invoice-first",
+        "comparison": "EXACT_TEXT",
+        "input": "{\"purchaseOrderNumber\":\"PO-EXAMPLE-1001\",\"shipmentId\":\"SHIP-1001-A\",\"invoiceNumber\":\"INV-1001-A\",\"invoiceDate\":\"20261005\",\"currency\":\"USD\",\"totalCents\":22500,\"lines\":[{\"lineNumber\":1,\"sku\":\"ITEM-A\",\"quantity\":10,\"unit\":\"EA\",\"unitPrice\":12.5},{\"lineNumber\":2,\"sku\":\"ITEM-B\",\"quantity\":4,\"unit\":\"EA\",\"unitPrice\":25}]}",
+        "contentType": "application/json",
+        "params": null,
+        "functionalGroupIndex": null,
+        "transactionIndex": null,
+        "expectedOutput": "BIG*20261005*INV-1001-A**PO-EXAMPLE-1001~\nCUR*BY*USD~\nREF*SI*SHIP-1001-A~\nIT1*1*10*EA*12.5**VN*ITEM-A~\nIT1*2*4*EA*25**VN*ITEM-B~\nTDS*22500~\nCTT*2~",
+        "validateX12": true
+      },
+      {
+        "id": "invoice-remainder",
+        "name": "invoice-remainder",
+        "comparison": "EXACT_TEXT",
+        "input": "{\"purchaseOrderNumber\":\"PO-EXAMPLE-1001\",\"shipmentId\":\"SHIP-1001-B\",\"invoiceNumber\":\"INV-1001-B\",\"invoiceDate\":\"20261010\",\"currency\":\"USD\",\"totalCents\":15000,\"lines\":[{\"lineNumber\":1,\"sku\":\"ITEM-B\",\"quantity\":6,\"unit\":\"EA\",\"unitPrice\":25}]}",
+        "contentType": "application/json",
+        "params": null,
+        "functionalGroupIndex": null,
+        "transactionIndex": null,
+        "expectedOutput": "BIG*20261010*INV-1001-B**PO-EXAMPLE-1001~\nCUR*BY*USD~\nREF*SI*SHIP-1001-B~\nIT1*1*6*EA*25**VN*ITEM-B~\nTDS*15000~\nCTT*1~",
+        "validateX12": true
+      }
+    ]
+  }
+}

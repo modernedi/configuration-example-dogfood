@@ -1,0 +1,87 @@
+{
+  "apiVersion": "modernedi.com/v1",
+  "kind": "IntegrationConfiguration",
+  "resources": [
+    {
+      "kind": "As2Connection",
+      "key": "9d7e1e0c-1e98-4b44-a579-bf08d2642979",
+      "path": "as2-connections/9d7e1e0c-1e98-4b44-a579-bf08d2642979/connection.json"
+    },
+    {
+      "kind": "Partner",
+      "key": "61c5a052-9f83-49e9-a858-e7ddbc56a514",
+      "path": "partners/61c5a052-9f83-49e9-a858-e7ddbc56a514/partner.json"
+    },
+    {
+      "kind": "Mapping",
+      "key": "8ccf76f0-2701-4d4c-a5c4-94a453feec81",
+      "path": "mappings/8ccf76f0-2701-4d4c-a5c4-94a453feec81/mapping.json"
+    },
+    {
+      "kind": "Mapping",
+      "key": "598cf5b2-0a0e-4277-8565-98f43dc8a006",
+      "path": "mappings/598cf5b2-0a0e-4277-8565-98f43dc8a006/mapping.json"
+    },
+    {
+      "kind": "Mapping",
+      "key": "2481480a-4177-4503-87ba-2f43036ae65c",
+      "path": "mappings/2481480a-4177-4503-87ba-2f43036ae65c/mapping.json"
+    },
+    {
+      "kind": "Mapping",
+      "key": "4e948d62-a513-4fe7-8b88-12ba095b2b36",
+      "path": "mappings/4e948d62-a513-4fe7-8b88-12ba095b2b36/mapping.json"
+    },
+    {
+      "kind": "ScenarioDefinition",
+      "key": "fe29234b-a22a-4ed0-8330-d101a66f4bd7",
+      "path": "scenario-definitions/fe29234b-a22a-4ed0-8330-d101a66f4bd7/definition.json"
+    },
+    {
+      "kind": "ScenarioBinding",
+      "key": "1b9de4e6-86a5-48a3-8ef9-fece998ea517",
+      "path": "scenario-bindings/1b9de4e6-86a5-48a3-8ef9-fece998ea517/binding.json"
+    }
+  ],
+  "files": [
+    {
+      "path": "as2-connections/9d7e1e0c-1e98-4b44-a579-bf08d2642979/connection.json"
+    },
+    {
+      "path": "partners/61c5a052-9f83-49e9-a858-e7ddbc56a514/partner.json"
+    },
+    {
+      "path": "as2-connections/9d7e1e0c-1e98-4b44-a579-bf08d2642979/certificates/shared.pem"
+    },
+    {
+      "path": "mappings/8ccf76f0-2701-4d4c-a5c4-94a453feec81/mapping.json"
+    },
+    {
+      "path": "mappings/8ccf76f0-2701-4d4c-a5c4-94a453feec81/source.x12mapper"
+    },
+    {
+      "path": "mappings/598cf5b2-0a0e-4277-8565-98f43dc8a006/mapping.json"
+    },
+    {
+      "path": "mappings/598cf5b2-0a0e-4277-8565-98f43dc8a006/source.jslt"
+    },
+    {
+      "path": "mappings/2481480a-4177-4503-87ba-2f43036ae65c/mapping.json"
+    },
+    {
+      "path": "mappings/2481480a-4177-4503-87ba-2f43036ae65c/source.jslt"
+    },
+    {
+      "path": "mappings/4e948d62-a513-4fe7-8b88-12ba095b2b36/mapping.json"
+    },
+    {
+      "path": "mappings/4e948d62-a513-4fe7-8b88-12ba095b2b36/source.jslt"
+    },
+    {
+      "path": "scenario-definitions/fe29234b-a22a-4ed0-8330-d101a66f4bd7/definition.json"
+    },
+    {
+      "path": "scenario-bindings/1b9de4e6-86a5-48a3-8ef9-fece998ea517/binding.json"
+    }
+  ]
+}

@@ -1,5 +1,10 @@
 # Synthetic ModernEDI acceptance workspace
 
+This revision temporarily includes the [conversation release acceptance overlay](acceptance-fixtures/README.md).
+`PUBLIC_SOURCE.json` describes the original baseline export, not that temporary overlay;
+the overlay is reviewed in Git history and will be removed after configuration restoration.
+It tests the published runner 0.6.0 and SDK 0.10.0; restoration also restores the baseline package pins.
+
 This is a controlled, disposable test of the [public configuration example](https://github.com/modernedi/configuration-example), not a customer repository. **Never add real customer configuration or data here: workflow logs and artifacts are public.**
 
 The dedicated workspace contains only the synthetic example. No EDI is sent. The additional, manually dispatched `dogfood.yml` workflow reuses the example's plan, saved-case verification, approval, and exact reviewed-apply jobs. Each job checks the pinned workspace identity, exact key scopes, and absence of automatic Git imports. Apply requires environment approval on protected main. The original private-copy workflows remain disabled here.
