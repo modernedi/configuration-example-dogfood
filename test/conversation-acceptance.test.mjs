@@ -44,6 +44,14 @@ test('every temporary fixture uses the current portable schema and saved cases',
     assert.equal(binding.spec.source.spec.environment, 'test');
     assert.equal(binding.spec.source.spec.regressionCases.length, 4);
     assert.ok(resources.filter(value => value.kind === 'Mapping').every(value => value.spec.regressionCases.length > 0));
+    for (const { spec } of resources.filter(value => value.kind === 'Mapping')) {
+      const ids = spec.regressionCases.map(value => value.id);
+      assert.deepEqual(ids, [...ids].sort(), `${suite}: mapping cases must use canonical ID order`);
+      if (spec.direction === 'INCOMING') {
+        assert.equal(typeof spec.businessKey?.name, 'string', `${suite}: incoming mapping needs its business key`);
+        assert.equal(typeof spec.businessKey?.extractor, 'string');
+      }
+    }
   }
 });
 

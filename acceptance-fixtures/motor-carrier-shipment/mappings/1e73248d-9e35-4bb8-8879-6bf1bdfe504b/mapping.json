@@ -25,15 +25,15 @@
     },
     "regressionCases": [
       {
-        "id": "pickup-example",
-        "name": "pickup example",
+        "id": "delivery-example",
+        "name": "delivery example",
         "comparison": "EXACT_TEXT",
-        "input": "{\"proNumber\":\"PRO1001\",\"loadId\":\"LOAD1001\",\"carrier\":\"EXMP\",\"status\":\"AF\",\"date\":\"20261005\",\"time\":\"0900\",\"city\":\"PHOENIX\"}",
+        "input": "{\"proNumber\":\"PRO1001\",\"loadId\":\"LOAD1001\",\"carrier\":\"EXMP\",\"status\":\"D1\",\"date\":\"20261005\",\"time\":\"1300\",\"city\":\"TUCSON\"}",
         "contentType": "application/json",
         "params": null,
         "functionalGroupIndex": null,
         "transactionIndex": null,
-        "expectedOutput": "B10*PRO1001*LOAD1001*EXMP~\nLX*1~\nAT7*AF*NS***20261005*0900*UT~\nMS1*PHOENIX*AZ*US~",
+        "expectedOutput": "B10*PRO1001*LOAD1001*EXMP~\nLX*1~\nAT7*D1*NS***20261005*1300*UT~\nMS1*TUCSON*AZ*US~",
         "validateX12": true
       },
       {
@@ -49,15 +49,15 @@
         "validateX12": true
       },
       {
-        "id": "delivery-example",
-        "name": "delivery example",
+        "id": "pickup-example",
+        "name": "pickup example",
         "comparison": "EXACT_TEXT",
-        "input": "{\"proNumber\":\"PRO1001\",\"loadId\":\"LOAD1001\",\"carrier\":\"EXMP\",\"status\":\"D1\",\"date\":\"20261005\",\"time\":\"1300\",\"city\":\"TUCSON\"}",
+        "input": "{\"proNumber\":\"PRO1001\",\"loadId\":\"LOAD1001\",\"carrier\":\"EXMP\",\"status\":\"AF\",\"date\":\"20261005\",\"time\":\"0900\",\"city\":\"PHOENIX\"}",
         "contentType": "application/json",
         "params": null,
         "functionalGroupIndex": null,
         "transactionIndex": null,
-        "expectedOutput": "B10*PRO1001*LOAD1001*EXMP~\nLX*1~\nAT7*D1*NS***20261005*1300*UT~\nMS1*TUCSON*AZ*US~",
+        "expectedOutput": "B10*PRO1001*LOAD1001*EXMP~\nLX*1~\nAT7*AF*NS***20261005*0900*UT~\nMS1*PHOENIX*AZ*US~",
         "validateX12": true
       }
     ]

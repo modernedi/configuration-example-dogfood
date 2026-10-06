@@ -48,6 +48,10 @@
       "purpose": "PROCESSING",
       "delivery": "MAPPED_OUTPUTS"
     },
+    "businessKey": {
+      "name": "loadId",
+      "extractor": "ST->B2(04)"
+    },
     "deliveredMetadata": {
       "partner": true,
       "transactionTimestamp": true,
