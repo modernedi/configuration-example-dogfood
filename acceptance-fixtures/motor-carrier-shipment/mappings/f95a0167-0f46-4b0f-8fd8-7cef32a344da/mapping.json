@@ -1,0 +1,53 @@
+{
+  "apiVersion": "modernedi.com/v1",
+  "kind": "Mapping",
+  "metadata": {
+    "key": "f95a0167-0f46-4b0f-8fd8-7cef32a344da"
+  },
+  "spec": {
+    "runtime": {
+      "extraFields": {}
+    },
+    "partnerKey": "61c5a052-9f83-49e9-a858-e7ddbc56a514",
+    "direction": "OUTGOING",
+    "x12Version": "4010",
+    "functionalIdentifierCode": "GF",
+    "transactionSetIdentifierCode": "990",
+    "transform": {
+      "type": "JSLT",
+      "fileName": "response.jslt",
+      "sourcePath": "mappings/f95a0167-0f46-4b0f-8fd8-7cef32a344da/source.jslt"
+    },
+    "output": {
+      "contentType": "application/edi-x12",
+      "purpose": "PROCESSING",
+      "delivery": "OUTBOUND_AS2"
+    },
+    "regressionCases": [
+      {
+        "id": "accept-example",
+        "name": "accept example",
+        "comparison": "EXACT_TEXT",
+        "input": "{\"carrier\":\"EXMP\",\"loadId\":\"LOAD1001\",\"date\":\"20261004\",\"action\":\"A\"}",
+        "contentType": "application/json",
+        "params": null,
+        "functionalGroupIndex": null,
+        "transactionIndex": null,
+        "expectedOutput": "B1*EXMP*LOAD1001*20261004*A~",
+        "validateX12": true
+      },
+      {
+        "id": "decline-example",
+        "name": "decline example",
+        "comparison": "EXACT_TEXT",
+        "input": "{\"carrier\":\"EXMP\",\"loadId\":\"LOAD1001\",\"date\":\"20261004\",\"action\":\"R\"}",
+        "contentType": "application/json",
+        "params": null,
+        "functionalGroupIndex": null,
+        "transactionIndex": null,
+        "expectedOutput": "B1*EXMP*LOAD1001*20261004*R~",
+        "validateX12": true
+      }
+    ]
+  }
+}

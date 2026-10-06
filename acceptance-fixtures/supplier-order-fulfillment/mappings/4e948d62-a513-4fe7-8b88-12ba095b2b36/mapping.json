@@ -1,0 +1,41 @@
+{
+  "apiVersion": "modernedi.com/v1",
+  "kind": "Mapping",
+  "metadata": {
+    "key": "4e948d62-a513-4fe7-8b88-12ba095b2b36"
+  },
+  "spec": {
+    "runtime": {
+      "extraFields": {}
+    },
+    "partnerKey": "61c5a052-9f83-49e9-a858-e7ddbc56a514",
+    "direction": "OUTGOING",
+    "x12Version": "4010",
+    "functionalIdentifierCode": "IN",
+    "transactionSetIdentifierCode": "810",
+    "transform": {
+      "type": "JSLT",
+      "fileName": "invoice.jslt",
+      "sourcePath": "mappings/4e948d62-a513-4fe7-8b88-12ba095b2b36/source.jslt"
+    },
+    "output": {
+      "contentType": "application/edi-x12",
+      "purpose": "PROCESSING",
+      "delivery": "OUTBOUND_AS2"
+    },
+    "regressionCases": [
+      {
+        "id": "invoice-example",
+        "name": "Generate the 810 for PO-EXAMPLE-1001",
+        "comparison": "EXACT_TEXT",
+        "input": "{\"purchaseOrderNumber\":\"PO-EXAMPLE-1001\",\"shipmentId\":\"SHIP-1001\",\"invoiceNumber\":\"INV-1001\",\"invoiceDate\":\"20261005\",\"currency\":\"USD\",\"totalCents\":37500,\"lines\":[{\"lineNumber\":1,\"sku\":\"ITEM-A\",\"quantity\":10,\"unit\":\"EA\",\"unitPrice\":12.5},{\"lineNumber\":2,\"sku\":\"ITEM-B\",\"quantity\":10,\"unit\":\"EA\",\"unitPrice\":25}]}",
+        "contentType": "application/json",
+        "params": null,
+        "functionalGroupIndex": null,
+        "transactionIndex": null,
+        "expectedOutput": "BIG*20261005*INV-1001**PO-EXAMPLE-1001~\nCUR*BY*USD~\nREF*SI*SHIP-1001~\nIT1*1*10*EA*12.5**VN*ITEM-A~\nIT1*2*10*EA*25**VN*ITEM-B~\nTDS*37500~\nCTT*2~",
+        "validateX12": true
+      }
+    ]
+  }
+}

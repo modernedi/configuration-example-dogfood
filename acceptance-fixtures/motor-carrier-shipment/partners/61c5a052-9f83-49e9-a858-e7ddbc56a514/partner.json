@@ -1,0 +1,32 @@
+{
+  "apiVersion": "modernedi.com/v1",
+  "kind": "Partner",
+  "metadata": {
+    "key": "61c5a052-9f83-49e9-a858-e7ddbc56a514"
+  },
+  "spec": {
+    "name": "Example Retailer (synthetic)",
+    "as2ConnectionKey": "9d7e1e0c-1e98-4b44-a579-bf08d2642979",
+    "x12": {
+      "production": {
+        "isaQualifier": "ZZ",
+        "isaId": "EXAMPLE_BUYER",
+        "gsId": "EXAMPLE_BUYER"
+      },
+      "test": {
+        "isaQualifier": "ZZ",
+        "isaId": "EXAMPLE_BUYER_T",
+        "gsId": "EXAMPLE_BUYER_T"
+      }
+    },
+    "ediSupportEmail": "edi@example.invalid",
+    "carbonCopyOnly": false,
+    "implementationAcknowledgmentEnabled": true,
+    "unmappedInboundPolicy": "MAPPED_ONLY",
+    "signingCertificateSlot": "active",
+    "supportsNewlineAfterSegmentTerminator": false,
+    "overrideUserAgentString": null,
+    "overrideSeparatorSet": null,
+    "messageTypeGsVersionOverrides": {}
+  }
+}

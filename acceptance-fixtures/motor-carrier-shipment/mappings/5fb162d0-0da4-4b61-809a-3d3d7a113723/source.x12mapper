@@ -1,0 +1,6 @@
+toJson({
+  "loadId": trim(ST->B2(04)[0]),
+  "carrier": trim(ST->B2(02)[0]),
+  "currency": trim(ST->L11[02 == "RB"](01)[0]),
+  "agreedCharge": toNumber(ST->L3(05)) / 100
+})

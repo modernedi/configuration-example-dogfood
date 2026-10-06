@@ -1,0 +1,65 @@
+{
+  "apiVersion": "modernedi.com/v1",
+  "kind": "Mapping",
+  "metadata": {
+    "key": "1e73248d-9e35-4bb8-8879-6bf1bdfe504b"
+  },
+  "spec": {
+    "runtime": {
+      "extraFields": {}
+    },
+    "partnerKey": "61c5a052-9f83-49e9-a858-e7ddbc56a514",
+    "direction": "OUTGOING",
+    "x12Version": "4010",
+    "functionalIdentifierCode": "QM",
+    "transactionSetIdentifierCode": "214",
+    "transform": {
+      "type": "JSLT",
+      "fileName": "status.jslt",
+      "sourcePath": "mappings/1e73248d-9e35-4bb8-8879-6bf1bdfe504b/source.jslt"
+    },
+    "output": {
+      "contentType": "application/edi-x12",
+      "purpose": "PROCESSING",
+      "delivery": "OUTBOUND_AS2"
+    },
+    "regressionCases": [
+      {
+        "id": "pickup-example",
+        "name": "pickup example",
+        "comparison": "EXACT_TEXT",
+        "input": "{\"proNumber\":\"PRO1001\",\"loadId\":\"LOAD1001\",\"carrier\":\"EXMP\",\"status\":\"AF\",\"date\":\"20261005\",\"time\":\"0900\",\"city\":\"PHOENIX\"}",
+        "contentType": "application/json",
+        "params": null,
+        "functionalGroupIndex": null,
+        "transactionIndex": null,
+        "expectedOutput": "B10*PRO1001*LOAD1001*EXMP~\nLX*1~\nAT7*AF*NS***20261005*0900*UT~\nMS1*PHOENIX*AZ*US~",
+        "validateX12": true
+      },
+      {
+        "id": "enroute-example",
+        "name": "enroute example",
+        "comparison": "EXACT_TEXT",
+        "input": "{\"proNumber\":\"PRO1001\",\"loadId\":\"LOAD1001\",\"carrier\":\"EXMP\",\"status\":\"X6\",\"date\":\"20261005\",\"time\":\"1000\",\"city\":\"CASA GRANDE\"}",
+        "contentType": "application/json",
+        "params": null,
+        "functionalGroupIndex": null,
+        "transactionIndex": null,
+        "expectedOutput": "B10*PRO1001*LOAD1001*EXMP~\nLX*1~\nAT7*X6*NS***20261005*1000*UT~\nMS1*CASA GRANDE*AZ*US~",
+        "validateX12": true
+      },
+      {
+        "id": "delivery-example",
+        "name": "delivery example",
+        "comparison": "EXACT_TEXT",
+        "input": "{\"proNumber\":\"PRO1001\",\"loadId\":\"LOAD1001\",\"carrier\":\"EXMP\",\"status\":\"D1\",\"date\":\"20261005\",\"time\":\"1300\",\"city\":\"TUCSON\"}",
+        "contentType": "application/json",
+        "params": null,
+        "functionalGroupIndex": null,
+        "transactionIndex": null,
+        "expectedOutput": "B10*PRO1001*LOAD1001*EXMP~\nLX*1~\nAT7*D1*NS***20261005*1300*UT~\nMS1*TUCSON*AZ*US~",
+        "validateX12": true
+      }
+    ]
+  }
+}

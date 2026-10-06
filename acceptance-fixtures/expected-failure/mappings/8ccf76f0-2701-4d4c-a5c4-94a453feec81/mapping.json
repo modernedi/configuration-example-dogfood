@@ -1,0 +1,80 @@
+{
+  "apiVersion": "modernedi.com/v1",
+  "kind": "Mapping",
+  "metadata": {
+    "key": "8ccf76f0-2701-4d4c-a5c4-94a453feec81"
+  },
+  "spec": {
+    "runtime": {
+      "activeAttributes": {
+        "customer": true,
+        "messageId": true,
+        "timestamp": true,
+        "elementSeparator": true,
+        "subElementSeparator": true,
+        "segmentTerminator": true,
+        "repetitionSeparator": true,
+        "transactionX12": true,
+        "transactionIdentifier": true,
+        "functionalGroupX12": true,
+        "interchangeX12": true,
+        "x12AgencyCode": true,
+        "x12VersionStr": true,
+        "functionalGroupType": true,
+        "functionalGroupControlNumber": true,
+        "transactionGroupType": true,
+        "senderIdQualifier": true,
+        "senderId": true,
+        "gsSenderId": true,
+        "gsVersionStr": true,
+        "usageIndicator": true,
+        "userAgent": true,
+        "mapFileSha256Hash": true,
+        "testMessage": true
+      }
+    },
+    "partnerKey": "61c5a052-9f83-49e9-a858-e7ddbc56a514",
+    "direction": "INCOMING",
+    "x12Version": "4010",
+    "functionalIdentifierCode": "PO",
+    "transactionSetIdentifierCode": "850",
+    "transform": {
+      "type": "X12_MAPPER",
+      "fileName": "purchase-order.x12mapper",
+      "sourcePath": "mappings/8ccf76f0-2701-4d4c-a5c4-94a453feec81/source.x12mapper"
+    },
+    "output": {
+      "contentType": "application/json",
+      "purpose": "PROCESSING",
+      "delivery": "MAPPED_OUTPUTS"
+    },
+    "businessKey": {
+      "name": "purchaseOrderNumber",
+      "extractor": "ST->BEG(03)"
+    },
+    "deliveredMetadata": {
+      "partner": true,
+      "transactionTimestamp": true,
+      "transactionSet": true,
+      "transactionControlNumber": true,
+      "functionalGroupControlNumber": true,
+      "x12Version": true,
+      "functionalIdentifierCode": true,
+      "segmentTerminator": true,
+      "mappingSourceHash": true
+    },
+    "regressionCases": [
+      {
+        "id": "purchase-order-example",
+        "name": "Read both order lines",
+        "comparison": "EXACT_TEXT",
+        "input": "ISA*00*          *00*          *ZZ*EXAMPLEBUYER   *ZZ*EXAMPLESUPPLIER*261004*1200*U*00401*000000001*0*T*:~\nGS*PO*EXAMPLEBUYER*EXAMPLESUPPLIER*20261004*1200*1*X*004010~\nST*850*0001~\nBEG*00*SA*PO-EXAMPLE-1001**20261004~\nCUR*BY*USD~\nPO1*1*10*EA*12.50**VN*ITEM-A~\nPO1*2*10*EA*25**VN*ITEM-B~\nCTT*2~\nSE*7*0001~\nGE*1*1~\nIEA*1*000000001~\n",
+        "contentType": "application/edi-x12",
+        "params": null,
+        "functionalGroupIndex": 0,
+        "transactionIndex": 0,
+        "expectedOutput": "{\"purchaseOrderNumber\":\"PO-EXAMPLE-1001\",\"currency\":\"USD\",\"lines\":[{\"sku\":\"ITEM-A\",\"quantity\":10,\"unit\":\"EA\",\"unitPrice\":12.50},{\"sku\":\"ITEM-B\",\"quantity\":10,\"unit\":\"EA\",\"unitPrice\":25}]}"
+      }
+    ]
+  }
+}

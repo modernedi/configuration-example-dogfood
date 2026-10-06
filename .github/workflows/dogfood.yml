@@ -46,7 +46,11 @@ jobs:
           MODERNEDI_API_KEY: ${{ secrets.MODERNEDI_API_KEY }}
           MODERNEDI_VERIFY_CASES: ${{ steps.policy.outputs.verify_cases }}
           MODERNEDI_SOURCE_SHA: ${{ github.sha }}
-        run: node scripts/ci.mjs plan modernedi artifacts
+        run: node scripts/ci.mjs plan acceptance-fixtures/supplier-order-fulfillment artifacts
+      - name: Verify all downloaded conversation examples and an expected failure
+        env:
+          MODERNEDI_API_KEY: ${{ secrets.MODERNEDI_API_KEY }}
+        run: node scripts/conversation-acceptance.mjs plan artifacts
       - name: Keep synthetic review evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -78,12 +82,16 @@ jobs:
         env:
           MODERNEDI_API_KEY: ${{ secrets.MODERNEDI_API_KEY }}
         run: node scripts/assert-dogfood-target.mjs apply
+      - name: Require rejection of failed and mismatched evidence
+        env:
+          MODERNEDI_API_KEY: ${{ secrets.MODERNEDI_API_KEY }}
+        run: node scripts/conversation-acceptance.mjs rejections artifacts
       - name: Apply exactly what was reviewed
         env:
           MODERNEDI_API_KEY: ${{ secrets.MODERNEDI_API_KEY }}
           MODERNEDI_VERIFY_CASES: ${{ needs.plan.outputs.verify_cases }}
           MODERNEDI_SOURCE_SHA: ${{ github.sha }}
-        run: node scripts/ci.mjs apply modernedi artifacts
+        run: node scripts/ci.mjs apply acceptance-fixtures/supplier-order-fulfillment artifacts
       - name: Keep operation identity even if observation times out
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

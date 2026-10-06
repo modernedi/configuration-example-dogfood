@@ -1,0 +1,3 @@
+[
+  "BAK*00*AK*" + .input.purchaseOrderNumber + "*" + .input.orderDate + "~"
+]
