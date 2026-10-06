@@ -85,7 +85,8 @@ async function main(mode, artifactDirectory) {
   assert.equal(baselinePlan.plan.currentSnapshotEtag, reviewed.plan.currentSnapshotEtag);
   const failedRequest = await load('expected-failure');
   const failedPlan = await planConfiguration(client, failedRequest);
-  assert.equal(failedPlan.plan.applicable, true);
+  if (mode === 'plan') await save('expected-failure-plan.json', failedPlan);
+  assert.equal(failedPlan.plan.applicable, true, 'The negative-test fixture must be a valid configuration; inspect expected-failure-plan.json');
   assert.equal(failedPlan.plan.currentSnapshotEtag, reviewed.plan.currentSnapshotEtag);
 
   if (mode === 'plan') {
@@ -101,7 +102,6 @@ async function main(mode, artifactDirectory) {
       assertVerification(report);
       console.log(`${suite}: ${report.run.cases.length} mapping/conversation cases passed; no apply or EDI.`);
     }
-    await save('expected-failure-plan.json', failedPlan);
     const report = await verifyReviewedConfiguration({ client, request: failedRequest, reviewedPlan: failedPlan,
       requestId: verificationRequestId(`${process.env.GITHUB_RUN_ID}:${process.env.GITHUB_SHA}:expected-failure`) });
     await save('expected-failure-verification.json', ConfigurationVerificationResponseToJSON(report));

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { assertVerification, expectRejection } from '../scripts/conversation-acceptance.mjs';
 import { checkBundle } from '../scripts/check.mjs';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 
 const report = () => ({ run: { status: 'PASSED', freshness: 'CURRENT', appliedOperationId: null,
   identity: { caseCount: 5, mappings: [{}, {}, {}, {}], untestedMappingCount: 0,
@@ -44,4 +45,12 @@ test('every temporary fixture uses the current portable schema and saved cases',
     assert.equal(binding.spec.source.spec.regressionCases.length, 4);
     assert.ok(resources.filter(value => value.kind === 'Mapping').every(value => value.spec.regressionCases.length > 0));
   }
+});
+
+test('deliberately wrong expectation still names a valid specific failing check', () => {
+  const binding = JSON.parse(readFileSync(new URL('../acceptance-fixtures/expected-failure/scenario-bindings/1b9de4e6-86a5-48a3-8ef9-fece998ea517/binding.json', import.meta.url), 'utf8'));
+  const testCase = binding.spec.source.spec.regressionCases.find(item => item.id === 'full-order-with-855');
+  assert.deepEqual(testCase.expected, { outcome: 'FAILED', checks: [{
+    id: 'assertion:invoiceTotalMatchesOrder', outcome: 'FAILED', code: 'VALUE_MISMATCH',
+  }] });
 });

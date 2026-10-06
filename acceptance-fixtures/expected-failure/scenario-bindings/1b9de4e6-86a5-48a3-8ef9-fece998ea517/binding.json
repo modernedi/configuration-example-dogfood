@@ -47,7 +47,13 @@
             "closeSteps": [],
             "expected": {
               "outcome": "FAILED",
-              "checks": []
+              "checks": [
+                {
+                  "id": "assertion:invoiceTotalMatchesOrder",
+                  "outcome": "FAILED",
+                  "code": "VALUE_MISMATCH"
+                }
+              ]
             }
           },
           {
